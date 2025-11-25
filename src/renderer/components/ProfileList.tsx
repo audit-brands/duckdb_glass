@@ -13,19 +13,41 @@ export default function ProfileList({ profiles, onDelete }: ProfileListProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {profiles.map((profile) => (
-        <div key={profile.id} className="card hover:shadow-lg transition-shadow min-w-0">
-          <div className="flex justify-between items-start mb-3">
-            <h3 className="font-semibold text-lg">{profile.name}</h3>
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1 mb-4">
-            <div className="truncate">
-              <span className="font-medium">Path:</span> {profile.dbPath}
+      {profiles.map((profile) => {
+        const isMemory = profile.dbPath === ':memory:';
+        const persistenceIcon = isMemory ? '🧠' : '💾';
+        const persistenceLabel = isMemory ? 'In-Memory' : 'Persistent';
+
+        return (
+          <div key={profile.id} className="card hover:shadow-lg transition-shadow min-w-0">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="font-semibold text-lg">{profile.name}</h3>
+              <span
+                className="text-lg"
+                title={`${persistenceLabel} database`}
+              >
+                {persistenceIcon}
+              </span>
             </div>
-            {profile.readOnly && (
-              <div className="text-yellow-600 dark:text-yellow-500">Read-only</div>
-            )}
-          </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1 mb-4">
+              <div className="flex items-center space-x-2 mb-1">
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  isMemory
+                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                }`}>
+                  {persistenceLabel}
+                </span>
+                {profile.readOnly && (
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
+                    Read-only
+                  </span>
+                )}
+              </div>
+              <div className="truncate">
+                <span className="font-medium">Path:</span> {profile.dbPath}
+              </div>
+            </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => navigate(`/db/${profile.id}/schema`)}
@@ -47,7 +69,8 @@ export default function ProfileList({ profiles, onDelete }: ProfileListProps) {
             </button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
