@@ -110,6 +110,176 @@ The DuckDB Glass application has been successfully implemented and is ready for 
    - Integration tests
    - E2E tests with Playwright
 
+## Roadmap: Enhanced Data Connection Features
+
+### Overview
+DuckDB has unique capabilities beyond traditional database connections. We're enhancing the profile system to support multiple connection types and direct file querying.
+
+### Connection Types Supported
+
+**Current (v0.1.0)**:
+- Local `.duckdb` database files
+- In-memory databases (`:memory:`)
+
+**Planned**:
+- Direct file querying (CSV, Parquet, JSON)
+- Remote files via HTTP/S3 URLs
+- MotherDuck cloud databases
+- Multiple attached databases in one session
+
+### Phase 1: File Picker, Attached Files & Full SQL Support (Next)
+
+**Goal**: Enable users to easily select database files, attach data files for quick querying, and ensure full SQL support with proper persistence.
+
+**Profile Type Schema Enhancement**:
+```typescript
+interface DuckDBProfile {
+  id: string;
+  name: string;
+  connectionType: 'file' | 'memory' | 'motherduck';
+
+  // For file/memory
+  dbPath?: string;
+
+  // Quick access to data files (Parquet, CSV, etc.)
+  attachedFiles?: AttachedFile[];
+
+  readOnly?: boolean;
+  extensions?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AttachedFile {
+  id: string;
+  alias: string;      // e.g., "sales_data"
+  path: string;       // Local path or URL
+  type: 'parquet' | 'csv' | 'json';
+}
+```
+
+**Implementation Tasks - File Picker & Attachments**:
+- [ ] Add Electron dialog integration for file picking
+- [ ] Create IPC handler for showing file picker dialogs
+- [ ] Update ProfileForm to include file picker button for dbPath
+- [ ] Add "Attached Files" section to profile form/view
+- [ ] Implement file attachment UI (add/remove files)
+- [ ] Update DuckDBProfile type with attachedFiles field
+- [ ] Modify DuckDBService to register attached files as views
+- [ ] Update schema introspection to show attached file tables
+- [ ] Add visual indicators in schema tree for attached files
+
+**Implementation Tasks - Full SQL Support**:
+- [ ] Verify and test DDL statements (CREATE, ALTER, DROP, TRUNCATE)
+- [ ] Verify and test DML statements (INSERT, UPDATE, DELETE)
+- [ ] Verify and test DQL statements (SELECT) - already working
+- [ ] Verify and test TCL statements (BEGIN TRANSACTION, COMMIT, ROLLBACK)
+- [ ] Test persistence for file-based databases (.duckdb files)
+- [ ] Add affected row count display for DML operations
+- [ ] Improve query result handling for non-SELECT statements
+- [ ] Add clear UI indicators for in-memory vs persistent databases
+- [ ] Add transaction mode indicator in UI
+- [ ] Create example SQL snippets for common operations
+- [ ] Add SQL statement type detection for better result display
+
+**SQL Statement Support Matrix**:
+
+| Category | Statements | Status | Notes |
+|----------|-----------|--------|-------|
+| **DQL** (Data Query Language) | SELECT | ✅ Working | Fully functional with result grid |
+| **DDL** (Data Definition Language) | CREATE TABLE, CREATE VIEW, ALTER, DROP, TRUNCATE | ✅ Working | Need to verify all variants |
+| **DML** (Data Manipulation Language) | INSERT, UPDATE, DELETE | ✅ Working | Need affected row count display |
+| **TCL** (Transaction Control) | BEGIN, COMMIT, ROLLBACK, SAVEPOINT | ✅ Working | Need transaction indicator |
+| **DCL** (Data Control Language) | GRANT, REVOKE | ⚠️ N/A | Not applicable for file-based DuckDB |
+
+**Persistence Behavior**:
+- **File-based databases** (`.duckdb` files): All changes automatically persist to disk
+- **In-memory databases** (`:memory:`): All changes lost when connection closes
+- **Read-only mode**: Prevents any DDL/DML operations
+
+**User Experience**:
+1. When creating a profile, user can click "Browse" to select a .duckdb file
+2. Profile card shows persistence indicator (💾 for file, 🧠 for memory)
+3. User can attach data files (CSV, Parquet, JSON) with custom aliases
+4. Attached files appear in schema browser as queryable tables
+5. Example SQL workflows:
+   ```sql
+   -- DDL: Create persistent table in file-based database
+   CREATE TABLE customers (id INTEGER, name VARCHAR, email VARCHAR);
+
+   -- DML: Insert data
+   INSERT INTO customers VALUES (1, 'Alice', 'alice@example.com');
+
+   -- DQL: Query data
+   SELECT * FROM customers;
+
+   -- Attach and query Parquet file
+   SELECT * FROM sales_data;  -- where sales_data is attached file alias
+
+   -- TCL: Use transactions for complex operations
+   BEGIN TRANSACTION;
+   UPDATE customers SET email = 'newemail@example.com' WHERE id = 1;
+   COMMIT;
+   ```
+
+### Phase 2: MotherDuck Cloud Integration (Future)
+
+**Goal**: Connect to MotherDuck cloud databases for remote DuckDB access.
+
+**Profile Type Enhancement**:
+```typescript
+interface DuckDBProfile {
+  // ... existing fields ...
+
+  // For MotherDuck
+  motherDuckToken?: string;
+  motherDuckDatabase?: string;
+}
+```
+
+**Implementation Tasks**:
+- [ ] Add MotherDuck connection type option
+- [ ] Create secure token storage (Electron safeStorage)
+- [ ] Add token input field in profile form
+- [ ] Update DuckDBService to handle `md:` connection strings
+- [ ] Test connection validation for MotherDuck
+- [ ] Add connection status indicator for cloud databases
+- [ ] Handle authentication errors gracefully
+
+**User Experience**:
+1. User selects "MotherDuck" as connection type
+2. Enters MotherDuck token and database name
+3. Token is securely stored (not in plain text JSON)
+4. Connection indicator shows cloud status
+5. Can query remote DuckDB data transparently
+
+### Phase 3: Advanced File Features (Future)
+
+**Implementation Tasks**:
+- [ ] Support remote file URLs (HTTP, S3)
+- [ ] Add file format detection
+- [ ] Schema inference from files
+- [ ] File preview before attaching
+- [ ] Batch file attachment
+- [ ] Import wizard for common file patterns
+
+### Technical Considerations
+
+**Security**:
+- File paths must be validated before use
+- MotherDuck tokens stored using Electron's safeStorage API
+- Remote URLs should be validated and potentially sandboxed
+
+**Performance**:
+- Attached files are queried on-demand (not loaded into memory)
+- DuckDB's zero-copy reading for Parquet files
+- Consider caching file metadata for large datasets
+
+**Compatibility**:
+- Ensure DuckDB version supports required file formats
+- Test with various file encodings and schemas
+- Handle missing or moved files gracefully
+
 ## Known Limitations
 
 1. **Query Parameters**: Currently, parameterized queries are not fully implemented in the UI
