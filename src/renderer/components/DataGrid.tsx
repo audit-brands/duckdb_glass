@@ -42,7 +42,7 @@ export default function DataGrid({ result }: DataGridProps) {
               {row.map((cell, cellIdx) => (
                 <td
                   key={cellIdx}
-                  className="px-3 py-2 border-r border-gray-200 dark:border-gray-700 max-w-xs truncate"
+                  className="px-3 py-2 border-r border-gray-200 dark:border-gray-700 min-w-[100px] max-w-md break-words"
                   title={String(cell)}
                 >
                   {cell === null ? (
