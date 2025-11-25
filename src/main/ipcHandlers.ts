@@ -1,6 +1,6 @@
 // IPC Handlers - register all IPC communication handlers
 
-import { ipcMain, app } from 'electron';
+import { ipcMain, app, dialog } from 'electron';
 import { IPC_CHANNELS } from '../shared/constants';
 import type { DuckDBService } from './DuckDBService';
 import type { ProfileStore } from './ProfileStore';
@@ -131,6 +131,54 @@ export function registerIpcHandlers(
       return await duckdbService.runQuery(profileId, sql);
     } catch (error) {
       console.error('Failed to execute query:', error);
+      throw error;
+    }
+  });
+
+  // File dialog handlers
+  ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_DATABASE, async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'Select DuckDB Database File',
+        filters: [
+          { name: 'DuckDB Database', extensions: ['duckdb', 'db'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: ['openFile', 'createDirectory']
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return null;
+      }
+
+      return result.filePaths[0];
+    } catch (error) {
+      console.error('Failed to open database file dialog:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_DATA_FILE, async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'Select Data File',
+        filters: [
+          { name: 'Data Files', extensions: ['parquet', 'csv', 'json', 'jsonl'] },
+          { name: 'Parquet Files', extensions: ['parquet'] },
+          { name: 'CSV Files', extensions: ['csv'] },
+          { name: 'JSON Files', extensions: ['json', 'jsonl'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: ['openFile', 'multiSelections']
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return null;
+      }
+
+      return result.filePaths;
+    } catch (error) {
+      console.error('Failed to open data file dialog:', error);
       throw error;
     }
   });

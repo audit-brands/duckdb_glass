@@ -62,6 +62,12 @@ export default function ProfileList({ profiles, onDelete }: ProfileListProps) {
               Query
             </button>
             <button
+              onClick={() => navigate(`/db/${profile.id}/import`)}
+              className="flex-1 min-w-[80px] btn-secondary text-sm py-1.5"
+            >
+              Import
+            </button>
+            <button
               onClick={() => onDelete(profile.id)}
               className="flex-1 min-w-[80px] py-1.5 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800 text-sm"
             >

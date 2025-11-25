@@ -8,6 +8,7 @@ import SchemaPage from './routes/SchemaPage';
 import TablePage from './routes/TablePage';
 import ConstraintsPage from './routes/ConstraintsPage';
 import QueryPage from './routes/QueryPage';
+import ImportDataPage from './routes/ImportDataPage';
 import SettingsPage from './routes/SettingsPage';
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="profiles" element={<ProfilesPage />} />
         <Route path="db/:profileId/schema" element={<SchemaPage />} />
         <Route path="db/:profileId/query" element={<QueryPage />} />
+        <Route path="db/:profileId/import" element={<ImportDataPage />} />
         <Route path="db/:profileId/table/:schemaName/:tableName" element={<TablePage />} />
         <Route
           path="db/:profileId/constraints/:schemaName/:tableName"
