@@ -12,9 +12,46 @@ interface ProfileFormProps {
 export default function ProfileForm({ onSubmit, onCancel, initialValues }: ProfileFormProps) {
   const [name, setName] = useState(initialValues?.name || '');
   const [dbPath, setDbPath] = useState(initialValues?.dbPath || ':memory:');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSelectDatabase = async () => {
+    try {
+      const result = await window.duckdbGlass.files.selectDatabase();
+      if (result) {
+        setDbPath(result);
+        setError(null);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const validateDbPath = (path: string): string | null => {
+    if (path === ':memory:') return null;
+
+    // Check if path ends with a data file extension
+    const dataExtensions = ['.csv', '.parquet', '.json', '.jsonl', '.ndjson', '.txt'];
+    const lowerPath = path.toLowerCase();
+
+    for (const ext of dataExtensions) {
+      if (lowerPath.endsWith(ext)) {
+        return `This appears to be a data file (${ext}). Database path should be a .duckdb or .db file, not a data file. Use the Import feature to load data files.`;
+      }
+    }
+
+    return null;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const validationError = validateDbPath(dbPath);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError(null);
     onSubmit({ name, dbPath });
   };
 
@@ -34,17 +71,34 @@ export default function ProfileForm({ onSubmit, onCancel, initialValues }: Profi
 
       <div>
         <label className="block text-sm font-medium mb-1">Database Path</label>
-        <input
-          type="text"
-          value={dbPath}
-          onChange={(e) => setDbPath(e.target.value)}
-          className="input-field w-full"
-          placeholder=":memory: or /path/to/database.db"
-          required
-        />
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            value={dbPath}
+            onChange={(e) => {
+              setDbPath(e.target.value);
+              setError(null);
+            }}
+            className="input-field flex-1"
+            placeholder=":memory: or /path/to/database.duckdb"
+            required
+          />
+          <button
+            type="button"
+            onClick={handleSelectDatabase}
+            className="btn-secondary whitespace-nowrap"
+          >
+            Browse...
+          </button>
+        </div>
         <p className="text-xs text-gray-500 mt-1">
-          Use :memory: for an in-memory database, or provide a file path
+          Use <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">:memory:</code> for temporary data, or browse to select/create a <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">.duckdb</code> file
         </p>
+        {error && (
+          <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+            <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          </div>
+        )}
       </div>
 
       <div className="flex space-x-2">

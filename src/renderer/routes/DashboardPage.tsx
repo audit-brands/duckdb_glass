@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../state/hooks';
 import { loadProfiles } from '../state/slices/profilesSlice';
+import DatabaseOverview from '../components/DatabaseOverview';
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
@@ -23,49 +24,48 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-6xl">
       <h1 className="text-3xl font-bold mb-6">Welcome to DuckDB Glass</h1>
-      <div className="card mb-6">
-        <h2 className="text-xl font-semibold mb-4">Getting Started</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
-          DuckDB Glass is a desktop client for managing and querying DuckDB databases.
-        </p>
-        {profiles.length === 0 ? (
-          <div>
-            <p className="mb-4">You don't have any database profiles yet.</p>
-            <button onClick={() => navigate('/profiles')} className="btn-primary">
-              Create Your First Profile
-            </button>
-          </div>
-        ) : (
-          <div>
-            <p className="mb-4">You have {profiles.length} database profile(s).</p>
-            <button onClick={() => navigate('/profiles')} className="btn-primary">
-              View Profiles
-            </button>
-          </div>
-        )}
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="card">
-          <h3 className="font-semibold mb-2">Quick Actions</h3>
-          <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-            <li>• Create a new profile</li>
-            <li>• Browse database schemas</li>
-            <li>• Run SQL queries</li>
-            <li>• View table data</li>
-          </ul>
+
+      {profiles.length === 0 ? (
+        <div className="card mb-6">
+          <h2 className="text-xl font-semibold mb-4">Getting Started</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            DuckDB Glass is a desktop client for managing and querying DuckDB databases.
+          </p>
+          <p className="mb-4">You don't have any database profiles yet.</p>
+          <button onClick={() => navigate('/profiles')} className="btn-primary">
+            Create Your First Profile
+          </button>
         </div>
-        <div className="card">
-          <h3 className="font-semibold mb-2">Features</h3>
-          <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-            <li>• Multiple database profiles</li>
-            <li>• Schema introspection</li>
-            <li>• Query execution</li>
-            <li>• Data grid viewer</li>
-          </ul>
-        </div>
-      </div>
+      ) : (
+        <>
+          <div className="mb-6">
+            <DatabaseOverview profiles={profiles} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="card">
+              <h3 className="font-semibold mb-2">Quick Actions</h3>
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <li>• Create a new profile</li>
+                <li>• Browse database schemas</li>
+                <li>• Run SQL queries</li>
+                <li>• Import data from CSV/Parquet/JSON</li>
+              </ul>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold mb-2">Features</h3>
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <li>• Multiple database profiles</li>
+                <li>• Schema introspection</li>
+                <li>• Full SQL support (DDL, DML, DQL, TCL)</li>
+                <li>• Data grid viewer with export</li>
+              </ul>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

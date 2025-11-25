@@ -24,6 +24,7 @@ export const IPC_CHANNELS = {
 
   // File dialogs
   DIALOG_OPEN_DATABASE: 'duckdbGlass:dialog:openDatabase',
+  DIALOG_SAVE_DATABASE: 'duckdbGlass:dialog:saveDatabase',
   DIALOG_OPEN_DATA_FILE: 'duckdbGlass:dialog:openDataFile',
 
   // App metadata

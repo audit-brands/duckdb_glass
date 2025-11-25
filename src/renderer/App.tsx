@@ -9,6 +9,7 @@ import TablePage from './routes/TablePage';
 import ConstraintsPage from './routes/ConstraintsPage';
 import QueryPage from './routes/QueryPage';
 import ImportDataPage from './routes/ImportDataPage';
+import CreateDatabasePage from './routes/CreateDatabasePage';
 import SettingsPage from './routes/SettingsPage';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/" element={<RootLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="profiles" element={<ProfilesPage />} />
+        <Route path="create-database" element={<CreateDatabasePage />} />
         <Route path="db/:profileId/schema" element={<SchemaPage />} />
         <Route path="db/:profileId/query" element={<QueryPage />} />
         <Route path="db/:profileId/import" element={<ImportDataPage />} />

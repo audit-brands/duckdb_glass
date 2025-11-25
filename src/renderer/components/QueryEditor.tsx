@@ -23,7 +23,7 @@ function detectStatementType(sql: string): 'SELECT' | 'INSERT' | 'UPDATE' | 'DEL
 }
 
 export default function QueryEditor({ profileId }: QueryEditorProps) {
-  const [sql, setSql] = useState('SELECT 42 as answer;');
+  const [sql, setSql] = useState('');
   const [result, setResult] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -50,6 +50,7 @@ declare global {
       files: {
         selectFile(options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }): Promise<string | null>;
         selectDatabase(): Promise<string | null>;
+        saveDatabaseAs(): Promise<string | null>;
       };
     };
   }

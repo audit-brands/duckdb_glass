@@ -158,6 +158,30 @@ export function registerIpcHandlers(
     }
   });
 
+  ipcMain.handle(IPC_CHANNELS.DIALOG_SAVE_DATABASE, async () => {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Create DuckDB Database File',
+        defaultPath: 'database.duckdb',
+        filters: [
+          { name: 'DuckDB Database', extensions: ['duckdb'] },
+          { name: 'Database File', extensions: ['db'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+      });
+
+      if (result.canceled || !result.filePath) {
+        return null;
+      }
+
+      return result.filePath;
+    } catch (error) {
+      console.error('Failed to open save database dialog:', error);
+      throw error;
+    }
+  });
+
   ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_DATA_FILE, async () => {
     try {
       const result = await dialog.showOpenDialog({
