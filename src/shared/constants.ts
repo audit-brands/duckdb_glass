@@ -21,6 +21,7 @@ export const IPC_CHANNELS = {
 
   // Query execution
   QUERY_RUN: 'duckdbGlass:query:run',
+  QUERY_EXPORT_CSV: 'duckdbGlass:query:exportCsv',
 
   // File dialogs
   DIALOG_OPEN_DATABASE: 'duckdbGlass:dialog:openDatabase',

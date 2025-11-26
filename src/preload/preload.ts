@@ -45,6 +45,8 @@ contextBridge.exposeInMainWorld('duckdbGlass', {
   query: {
     run: (profileId: string, sql: string, _params?: QueryParam[]): Promise<QueryResult> =>
       ipcRenderer.invoke(IPC_CHANNELS.QUERY_RUN, profileId, sql),
+    exportCsv: (profileId: string, sql: string, filePath: string): Promise<number> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_CSV, profileId, sql, filePath),
   },
   constraints: {
     list: (

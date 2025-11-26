@@ -182,4 +182,43 @@ export class DuckDBService {
       return [];
     }
   }
+
+  /**
+   * Export query results directly to CSV using DuckDB's native COPY TO command.
+   * This is memory-efficient and can handle millions of rows without loading into memory.
+   *
+   * @param profileId - The profile ID for the database connection
+   * @param sql - The SQL query to execute
+   * @param filePath - The absolute path where the CSV file should be written
+   * @returns The number of rows exported
+   */
+  async exportToCsv(profileId: string, sql: string, filePath: string): Promise<number> {
+    const connection = this.getConnectionOrThrow(profileId);
+
+    try {
+      // Escape single quotes in file path
+      const escapedPath = filePath.replace(/'/g, "''");
+
+      // Use DuckDB's native COPY TO command for efficient streaming export
+      // This writes directly to disk without loading all data into memory
+      const copySQL = `COPY (${sql}) TO '${escapedPath}' (HEADER, DELIMITER ',');`;
+
+      const start = performance.now();
+      await connection.run(copySQL);
+      const executionTimeMs = performance.now() - start;
+
+      console.log(`Exported query results to ${filePath} in ${executionTimeMs.toFixed(2)}ms`);
+
+      // Get row count by querying the result
+      const countSQL = `SELECT COUNT(*) FROM (${sql})`;
+      const countReader = await connection.runAndReadAll(countSQL);
+      const rows = countReader.getRows();
+      const rowCount = Number(rows[0][0]);
+
+      return rowCount;
+    } catch (error) {
+      console.error(`CSV export failed for profile ${profileId}:`, error);
+      throw error;
+    }
+  }
 }

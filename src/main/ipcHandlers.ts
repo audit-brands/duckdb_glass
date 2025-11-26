@@ -136,6 +136,18 @@ export function registerIpcHandlers(
     }
   });
 
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_EXPORT_CSV,
+    async (_event, profileId: string, sql: string, filePath: string) => {
+      try {
+        return await duckdbService.exportToCsv(profileId, sql, filePath);
+      } catch (error) {
+        console.error('Failed to export CSV:', error);
+        throw error;
+      }
+    }
+  );
+
   // File dialog handlers
   ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_DATABASE, async () => {
     try {

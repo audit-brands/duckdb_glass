@@ -36,6 +36,7 @@ declare global {
       };
       query: {
         run(profileId: string, sql: string, params?: QueryParam[]): Promise<QueryResult>;
+        exportCsv(profileId: string, sql: string, filePath: string): Promise<number>;
       };
       constraints: {
         list(

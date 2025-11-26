@@ -8,38 +8,6 @@ interface QueryEditorProps {
   profileId: string;
 }
 
-// Convert query result to CSV format
-function convertToCSV(result: QueryResult): string {
-  const { columns, rows } = result;
-
-  // Helper to escape CSV values
-  const escapeCSVValue = (value: unknown): string => {
-    if (value === null || value === undefined) {
-      return '';
-    }
-
-    const stringValue = String(value);
-
-    // If value contains comma, quote, or newline, wrap in quotes and escape quotes
-    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
-      return `"${stringValue.replace(/"/g, '""')}"`;
-    }
-
-    return stringValue;
-  };
-
-  // Build CSV header
-  const header = columns.map(col => escapeCSVValue(col.name)).join(',');
-
-  // Build CSV rows - rows are arrays, not objects, so access by index
-  const csvRows = rows.map(row => {
-    return row.map(value => escapeCSVValue(value)).join(',');
-  });
-
-  // Combine header and rows
-  return [header, ...csvRows].join('\n');
-}
-
 // Detect SQL statement type
 function detectStatementType(sql: string): 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'CREATE' | 'ALTER' | 'DROP' | 'TRANSACTION' | 'OTHER' {
   const trimmed = sql.trim().toUpperCase();
@@ -94,21 +62,19 @@ export default function QueryEditor({ profileId }: QueryEditorProps) {
   };
 
   const handleExportCSV = async () => {
-    if (!result) return;
+    if (!result || !sql) return;
 
     try {
       // Show save dialog
       const filePath = await window.duckdbGlass.files.saveCsvAs();
       if (!filePath) return; // User cancelled
 
-      // Convert to CSV
-      const csvContent = convertToCSV(result);
-
-      // Write file
-      await window.duckdbGlass.files.writeFile(filePath, csvContent);
+      // Use DuckDB's native COPY TO command for memory-efficient export
+      // This streams directly to disk without loading all data into memory
+      const rowCount = await window.duckdbGlass.query.exportCsv(profileId, sql, filePath);
 
       // Show success feedback
-      alert(`Successfully exported ${result.rowCount} rows to ${filePath.split('/').pop()}`);
+      alert(`Successfully exported ${rowCount.toLocaleString()} rows to ${filePath.split('/').pop()}`);
     } catch (err) {
       setError(`Export failed: ${(err as Error).message}`);
     }
