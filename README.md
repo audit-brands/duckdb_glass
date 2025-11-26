@@ -17,12 +17,52 @@ A modern desktop client for DuckDB databases, built with Electron, React, and Ty
 ⚙️ **Settings Management** - Customize application preferences
 🌙 **Dark Mode Support** - Built-in light and dark themes
 
-## Prerequisites
+## Download & Installation
+
+### Installing Pre-built Binaries
+
+Download the latest release for your platform from the [Releases page](https://github.com/audit-brands/orbital-db/releases):
+
+#### macOS
+1. Download `Orbital.DB-X.X.X-arm64.dmg`
+2. Open the DMG file
+3. Drag Orbital DB to Applications
+
+**Security Note**: Since the app is not signed with an Apple Developer certificate, you'll see a security warning:
+- **First time**: Right-click the app → Select "Open" → Click "Open" in the dialog
+- **Alternative**: System Settings → Privacy & Security → Click "Open Anyway"
+
+#### Windows
+1. Download `Orbital.DB.Setup.X.X.X.exe`
+2. Run the installer
+
+**Security Note**: Windows SmartScreen will show a warning because the app is not code-signed:
+- Click "More info" → Click "Run anyway"
+
+#### Linux
+
+**Debian/Ubuntu** (DEB package):
+```bash
+sudo dpkg -i orbital-db_X.X.X_amd64.deb
+sudo apt-get install -f  # Install dependencies if needed
+```
+
+**Universal** (AppImage):
+```bash
+chmod +x Orbital.DB-X.X.X.AppImage
+./Orbital.DB-X.X.X.AppImage
+```
+
+### Why the Security Warnings?
+
+These builds are **not code-signed**. Code signing certificates cost $99-300/year per platform. The app is safe to use - the warnings are simply because we haven't purchased signing certificates yet. All code is open source and built via GitHub Actions, which you can verify in the repository.
+
+## Development Setup
+
+### Prerequisites
 
 - **Node.js** 20.0.0 or higher
 - **npm** or **yarn**
-
-## Installation
 
 ### Clone the Repository
 
