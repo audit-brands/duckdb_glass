@@ -53,7 +53,6 @@ declare global {
         selectDatabase(): Promise<string | null>;
         saveDatabaseAs(): Promise<string | null>;
         saveCsvAs(): Promise<string | null>;
-        writeFile(filePath: string, content: string): Promise<boolean>;
       };
     };
   }

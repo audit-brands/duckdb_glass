@@ -29,9 +29,6 @@ export const IPC_CHANNELS = {
   DIALOG_OPEN_DATA_FILE: 'orbitalDb:dialog:openDataFile',
   DIALOG_SAVE_CSV: 'orbitalDb:dialog:saveCsv',
 
-  // File operations
-  FILE_WRITE: 'orbitalDb:file:write',
-
   // App metadata
   APP_GET_VERSION: 'orbitalDb:app:getVersion',
 } as const;

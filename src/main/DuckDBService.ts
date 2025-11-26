@@ -33,6 +33,11 @@ export class DuckDBService {
       const instance = await DuckDBInstance.create(profile.dbPath);
       const connection = await instance.connect();
 
+      // Enforce read-only mode when requested
+      if (profile.readOnly) {
+        await connection.run('PRAGMA read_only=1;');
+      }
+
       // Configure DuckDB settings from environment defaults
       // These can be overridden per-connection or via user settings in the future
       await connection.run(`PRAGMA memory_limit='${CONFIG.duckdb.defaultMemoryLimit}';`);

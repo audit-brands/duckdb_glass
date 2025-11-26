@@ -6,7 +6,10 @@ import DataGrid from './DataGrid';
 
 interface QueryEditorProps {
   profileId: string;
+  isReadOnly?: boolean;
 }
+
+const MUTATING_STATEMENTS = new Set(['INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRANSACTION']);
 
 // Detect SQL statement type
 function detectStatementType(sql: string): 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'CREATE' | 'ALTER' | 'DROP' | 'TRANSACTION' | 'OTHER' {
@@ -22,7 +25,7 @@ function detectStatementType(sql: string): 'SELECT' | 'INSERT' | 'UPDATE' | 'DEL
   return 'OTHER';
 }
 
-export default function QueryEditor({ profileId }: QueryEditorProps) {
+export default function QueryEditor({ profileId, isReadOnly = false }: QueryEditorProps) {
   const [sql, setSql] = useState('');
   const [result, setResult] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,8 +33,19 @@ export default function QueryEditor({ profileId }: QueryEditorProps) {
   const [statementType, setStatementType] = useState<string>('SELECT');
 
   const handleRunQuery = async () => {
-    if (!sql.trim()) {
+    const trimmed = sql.trim();
+    if (!trimmed) {
       setError('Please enter a SQL query');
+      return;
+    }
+
+    // Detect statement type
+    const stmtType = detectStatementType(trimmed);
+    setStatementType(stmtType);
+
+    if (isReadOnly && MUTATING_STATEMENTS.has(stmtType)) {
+      setError('This profile is read-only. Only SELECT and other read-only statements are allowed.');
+      setResult(null);
       return;
     }
 
@@ -39,12 +53,8 @@ export default function QueryEditor({ profileId }: QueryEditorProps) {
     setError(null);
     setResult(null);
 
-    // Detect statement type
-    const stmtType = detectStatementType(sql);
-    setStatementType(stmtType);
-
     try {
-      const queryResult = await window.orbitalDb.query.run(profileId, sql);
+      const queryResult = await window.orbitalDb.query.run(profileId, trimmed);
       setResult(queryResult);
     } catch (err) {
       setError((err as Error).message);

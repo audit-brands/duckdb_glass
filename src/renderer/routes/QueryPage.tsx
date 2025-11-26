@@ -40,9 +40,14 @@ export default function QueryPage() {
           Profile: <span className="font-medium">{profile.name}</span> •{' '}
           <span className="text-sm">{profile.dbPath}</span>
         </p>
+        {profile.readOnly && (
+          <p className="mt-2 text-sm text-yellow-600 dark:text-yellow-400 font-medium">
+            Read-only connection &mdash; mutating statements will be blocked.
+          </p>
+        )}
       </div>
       <div className="flex-1">
-        <QueryEditor profileId={profileId!} />
+        <QueryEditor profileId={profileId!} isReadOnly={Boolean(profile.readOnly)} />
       </div>
     </div>
   );

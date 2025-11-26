@@ -1,7 +1,6 @@
 // IPC Handlers - register all IPC communication handlers
 
 import { ipcMain, app, dialog } from 'electron';
-import { promises as fs } from 'fs';
 import { IPC_CHANNELS } from '../shared/constants';
 import type { DuckDBService } from './DuckDBService';
 import type { ProfileStore } from './ProfileStore';
@@ -239,16 +238,6 @@ export function registerIpcHandlers(
       return result.filePath;
     } catch (error) {
       console.error('Failed to open save CSV dialog:', error);
-      throw error;
-    }
-  });
-
-  ipcMain.handle(IPC_CHANNELS.FILE_WRITE, async (_event, filePath: string, content: string) => {
-    try {
-      await fs.writeFile(filePath, content, 'utf-8');
-      return true;
-    } catch (error) {
-      console.error('Failed to write file:', error);
       throw error;
     }
   });

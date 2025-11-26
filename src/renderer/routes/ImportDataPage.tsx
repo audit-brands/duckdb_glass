@@ -130,6 +130,25 @@ export default function ImportDataPage() {
     );
   }
 
+  if (profile.readOnly) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-yellow-500 mb-4 text-lg font-semibold">Import Disabled</div>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          The profile <span className="font-medium">{profile.name}</span> is configured as read-only. Data import and schema modifications are not allowed for this connection.
+        </p>
+        <div className="space-x-2">
+          <button onClick={() => navigate(`/db/${profileId}/query`)} className="btn-primary">
+            Go to Query Editor
+          </button>
+          <button onClick={() => navigate('/profiles')} className="btn-secondary">
+            Manage Profiles
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl">
       <div className="mb-6">
