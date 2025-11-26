@@ -71,7 +71,7 @@ jobs:
           files: |
             release/**/*.dmg
             release/**/*-mac.zip
-            release/**/Orbital*.Setup.*.exe
+            release/**/*Setup*.exe
             release/**/*.deb
             release/**/*.AppImage
           draft: false
