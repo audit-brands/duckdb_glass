@@ -8,6 +8,38 @@ interface QueryEditorProps {
   profileId: string;
 }
 
+// Convert query result to CSV format
+function convertToCSV(result: QueryResult): string {
+  const { columns, rows } = result;
+
+  // Helper to escape CSV values
+  const escapeCSVValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    const stringValue = String(value);
+
+    // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
+      return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+
+    return stringValue;
+  };
+
+  // Build CSV header
+  const header = columns.map(col => escapeCSVValue(col.name)).join(',');
+
+  // Build CSV rows - rows are arrays, not objects, so access by index
+  const csvRows = rows.map(row => {
+    return row.map(value => escapeCSVValue(value)).join(',');
+  });
+
+  // Combine header and rows
+  return [header, ...csvRows].join('\n');
+}
+
 // Detect SQL statement type
 function detectStatementType(sql: string): 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'CREATE' | 'ALTER' | 'DROP' | 'TRANSACTION' | 'OTHER' {
   const trimmed = sql.trim().toUpperCase();
@@ -61,6 +93,27 @@ export default function QueryEditor({ profileId }: QueryEditorProps) {
     }
   };
 
+  const handleExportCSV = async () => {
+    if (!result) return;
+
+    try {
+      // Show save dialog
+      const filePath = await window.duckdbGlass.files.saveCsvAs();
+      if (!filePath) return; // User cancelled
+
+      // Convert to CSV
+      const csvContent = convertToCSV(result);
+
+      // Write file
+      await window.duckdbGlass.files.writeFile(filePath, csvContent);
+
+      // Show success feedback
+      alert(`Successfully exported ${result.rowCount} rows to ${filePath.split('/').pop()}`);
+    } catch (err) {
+      setError(`Export failed: ${(err as Error).message}`);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full space-y-4">
       {/* SQL Editor */}
@@ -107,8 +160,19 @@ export default function QueryEditor({ profileId }: QueryEditorProps) {
         <div className="card flex-1">
           <div className="mb-4 flex justify-between items-center">
             <h3 className="text-lg font-semibold">Results</h3>
-            <div className="text-sm text-gray-500">
-              {result.executionTimeMs.toFixed(2)}ms
+            <div className="flex items-center space-x-3">
+              <div className="text-sm text-gray-500">
+                {result.executionTimeMs.toFixed(2)}ms
+              </div>
+              {result.rowCount > 0 && (
+                <button
+                  onClick={handleExportCSV}
+                  className="btn-secondary text-sm"
+                  title="Export results to CSV"
+                >
+                  📥 Export CSV
+                </button>
+              )}
             </div>
           </div>
 

@@ -67,5 +67,9 @@ contextBridge.exposeInMainWorld('duckdbGlass', {
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_OPEN_DATABASE),
     saveDatabaseAs: (): Promise<string | null> =>
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SAVE_DATABASE),
+    saveCsvAs: (): Promise<string | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SAVE_CSV),
+    writeFile: (filePath: string, content: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FILE_WRITE, filePath, content),
   },
 });

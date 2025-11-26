@@ -51,6 +51,8 @@ declare global {
         selectFile(options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }): Promise<string | null>;
         selectDatabase(): Promise<string | null>;
         saveDatabaseAs(): Promise<string | null>;
+        saveCsvAs(): Promise<string | null>;
+        writeFile(filePath: string, content: string): Promise<boolean>;
       };
     };
   }

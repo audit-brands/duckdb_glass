@@ -5,10 +5,11 @@ import type { DuckDBProfile } from '@shared/types';
 
 interface ProfileListProps {
   profiles: DuckDBProfile[];
+  onEdit: (profile: DuckDBProfile) => void;
   onDelete: (id: string) => void;
 }
 
-export default function ProfileList({ profiles, onDelete }: ProfileListProps) {
+export default function ProfileList({ profiles, onEdit, onDelete }: ProfileListProps) {
   const navigate = useNavigate();
 
   return (
@@ -66,6 +67,12 @@ export default function ProfileList({ profiles, onDelete }: ProfileListProps) {
               className="flex-1 min-w-[80px] btn-secondary text-sm py-1.5"
             >
               Import
+            </button>
+            <button
+              onClick={() => onEdit(profile)}
+              className="flex-1 min-w-[80px] btn-secondary text-sm py-1.5"
+            >
+              Edit
             </button>
             <button
               onClick={() => onDelete(profile.id)}

@@ -94,6 +94,22 @@ export default function ProfileForm({ onSubmit, onCancel, initialValues }: Profi
         <p className="text-xs text-gray-500 mt-1">
           Use <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">:memory:</code> for temporary data, or browse to select/create a <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">.duckdb</code> file
         </p>
+        {dbPath === ':memory:' && (
+          <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+            <div className="flex items-start space-x-2">
+              <span className="text-yellow-600 dark:text-yellow-400 text-lg">⚠️</span>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">
+                  In-Memory Database Warning
+                </p>
+                <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                  All data (tables, views, indexes) will be lost when the app restarts or the connection closes.
+                  To persist your data, edit this profile and change to a file path.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         {error && (
           <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
             <p className="text-sm text-red-700 dark:text-red-400">{error}</p>

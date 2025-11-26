@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../state/hooks';
-import { loadProfiles, createProfile, deleteProfile } from '../state/slices/profilesSlice';
-import type { DuckDBProfileInput } from '@shared/types';
+import { loadProfiles, createProfile, updateProfile, deleteProfile } from '../state/slices/profilesSlice';
+import type { DuckDBProfile, DuckDBProfileInput } from '@shared/types';
 import ProfileForm from '../components/ProfileForm';
 import ProfileList from '../components/ProfileList';
 
@@ -13,14 +13,32 @@ export default function ProfilesPage() {
   const navigate = useNavigate();
   const { list: profiles, loading } = useAppSelector((state) => state.profiles);
   const [showForm, setShowForm] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<DuckDBProfile | null>(null);
 
   useEffect(() => {
     dispatch(loadProfiles());
   }, [dispatch]);
 
   const handleCreate = async (input: DuckDBProfileInput) => {
-    await dispatch(createProfile(input));
+    if (editingProfile) {
+      // Update existing profile
+      await dispatch(updateProfile({ id: editingProfile.id, update: input }));
+      setEditingProfile(null);
+    } else {
+      // Create new profile
+      await dispatch(createProfile(input));
+    }
     setShowForm(false);
+  };
+
+  const handleEdit = (profile: DuckDBProfile) => {
+    setEditingProfile(profile);
+    setShowForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setShowForm(false);
+    setEditingProfile(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -37,7 +55,13 @@ export default function ProfilesPage() {
           <button onClick={() => navigate('/create-database')} className="btn-primary">
             🚀 Create Database from Files
           </button>
-          <button onClick={() => setShowForm(!showForm)} className="btn-secondary">
+          <button
+            onClick={() => {
+              setEditingProfile(null);
+              setShowForm(!showForm);
+            }}
+            className="btn-secondary"
+          >
             {showForm ? 'Cancel' : '+ New Profile'}
           </button>
         </div>
@@ -45,8 +69,14 @@ export default function ProfilesPage() {
 
       {showForm && (
         <div className="card mb-6">
-          <h2 className="text-xl font-semibold mb-4">Create New Profile</h2>
-          <ProfileForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
+          <h2 className="text-xl font-semibold mb-4">
+            {editingProfile ? 'Edit Profile' : 'Create New Profile'}
+          </h2>
+          <ProfileForm
+            onSubmit={handleCreate}
+            onCancel={handleCancelEdit}
+            initialValues={editingProfile ? { name: editingProfile.name, dbPath: editingProfile.dbPath } : undefined}
+          />
         </div>
       )}
 
@@ -60,7 +90,7 @@ export default function ProfilesPage() {
           </button>
         </div>
       ) : (
-        <ProfileList profiles={profiles} onDelete={handleDelete} />
+        <ProfileList profiles={profiles} onEdit={handleEdit} onDelete={handleDelete} />
       )}
     </div>
   );
