@@ -28,7 +28,6 @@ export default function ImportDataPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [previewSql, setPreviewSql] = useState('');
 
   useEffect(() => {
     if (profileId) {
@@ -100,8 +99,6 @@ export default function ImportDataPage() {
       tableName,
     });
 
-    setPreviewSql(sql);
-
     try {
       await window.orbitalDb.query.run(profileId, sql);
       setSuccess(true);
@@ -120,7 +117,6 @@ export default function ImportDataPage() {
     setFormat('csv');
     setError(null);
     setSuccess(false);
-    setPreviewSql('');
   };
 
   if (!profile) {

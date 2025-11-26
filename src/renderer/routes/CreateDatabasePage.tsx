@@ -27,7 +27,6 @@ export default function CreateDatabasePage() {
   const [selectedFiles, setSelectedFiles] = useState<DataFileImport[]>([]);
 
   // Progress
-  const [currentStep, setCurrentStep] = useState(1);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState('');
