@@ -75,7 +75,11 @@ export default function ProfilesPage() {
           <ProfileForm
             onSubmit={handleCreate}
             onCancel={handleCancelEdit}
-            initialValues={editingProfile ? { name: editingProfile.name, dbPath: editingProfile.dbPath } : undefined}
+            initialValues={editingProfile ? {
+              name: editingProfile.name,
+              dbPath: editingProfile.dbPath,
+              attachedFiles: editingProfile.attachedFiles
+            } : undefined}
           />
         </div>
       )}
