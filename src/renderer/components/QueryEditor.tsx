@@ -65,17 +65,19 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
           setResult(null);
 
           // Record failed query in history
-          window.orbitalDb.queryHistory.add(profileId, {
-            sql: trimmed,
-            timestamp: Date.now(),
-            executionTimeMs: queryResult.executionTimeMs,
-            rowCount: 0,
-            statementType: queryResult.statementType,
-            success: false,
-            error: `This profile is read-only. ${queryResult.statementType} statements are not allowed.`,
-          }).catch(err => {
-            console.error('Failed to record query history:', err);
-          });
+          if (window.orbitalDb?.queryHistory) {
+            window.orbitalDb.queryHistory.add(profileId, {
+              sql: trimmed,
+              timestamp: Date.now(),
+              executionTimeMs: queryResult.executionTimeMs,
+              rowCount: 0,
+              statementType: queryResult.statementType,
+              success: false,
+              error: `This profile is read-only. ${queryResult.statementType} statements are not allowed.`,
+            }).catch(err => {
+              console.error('Failed to record query history:', err);
+            });
+          }
 
           return;
         }
@@ -83,47 +85,53 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
         setResult(queryResult);
 
         // Record successful query in history
-        window.orbitalDb.queryHistory.add(profileId, {
-          sql: trimmed,
-          timestamp: Date.now(),
-          executionTimeMs: queryResult.executionTimeMs,
-          rowCount: queryResult.rowCount,
-          statementType: queryResult.statementType,
-          success: true,
-        }).catch(err => {
-          console.error('Failed to record query history:', err);
-        });
+        if (window.orbitalDb?.queryHistory) {
+          window.orbitalDb.queryHistory.add(profileId, {
+            sql: trimmed,
+            timestamp: Date.now(),
+            executionTimeMs: queryResult.executionTimeMs,
+            rowCount: queryResult.rowCount,
+            statementType: queryResult.statementType,
+            success: true,
+          }).catch(err => {
+            console.error('Failed to record query history:', err);
+          });
+        }
       })
       .catch((err) => {
         if (cancelRequestedRef.current) {
           setError('Query cancelled by user');
 
           // Record cancelled query in history
-          window.orbitalDb.queryHistory.add(profileId, {
-            sql: trimmed,
-            timestamp: Date.now(),
-            executionTimeMs: 0,
-            rowCount: 0,
-            success: false,
-            error: 'Query cancelled by user',
-          }).catch(historyErr => {
-            console.error('Failed to record query history:', historyErr);
-          });
+          if (window.orbitalDb?.queryHistory) {
+            window.orbitalDb.queryHistory.add(profileId, {
+              sql: trimmed,
+              timestamp: Date.now(),
+              executionTimeMs: 0,
+              rowCount: 0,
+              success: false,
+              error: 'Query cancelled by user',
+            }).catch(historyErr => {
+              console.error('Failed to record query history:', historyErr);
+            });
+          }
         } else {
           const errorMessage = (err as Error).message;
           setError(errorMessage);
 
           // Record failed query in history
-          window.orbitalDb.queryHistory.add(profileId, {
-            sql: trimmed,
-            timestamp: Date.now(),
-            executionTimeMs: 0,
-            rowCount: 0,
-            success: false,
-            error: errorMessage,
-          }).catch(historyErr => {
-            console.error('Failed to record query history:', historyErr);
-          });
+          if (window.orbitalDb?.queryHistory) {
+            window.orbitalDb.queryHistory.add(profileId, {
+              sql: trimmed,
+              timestamp: Date.now(),
+              executionTimeMs: 0,
+              rowCount: 0,
+              success: false,
+              error: errorMessage,
+            }).catch(historyErr => {
+              console.error('Failed to record query history:', historyErr);
+            });
+          }
         }
       })
       .finally(() => {

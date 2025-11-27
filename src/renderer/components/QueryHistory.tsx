@@ -18,6 +18,14 @@ export default function QueryHistory({ profileId, onSelectQuery }: QueryHistoryP
     try {
       setLoading(true);
       setError(null);
+
+      // Check if API is available
+      if (!window.orbitalDb?.queryHistory) {
+        console.warn('Query history API not available yet');
+        setHistory([]);
+        return;
+      }
+
       const entries = await window.orbitalDb.queryHistory.get(profileId);
       setHistory(entries);
     } catch (err) {
@@ -37,6 +45,11 @@ export default function QueryHistory({ profileId, onSelectQuery }: QueryHistoryP
     }
 
     try {
+      if (!window.orbitalDb?.queryHistory) {
+        console.warn('Query history API not available');
+        return;
+      }
+
       await window.orbitalDb.queryHistory.clear(profileId);
       setHistory([]);
     } catch (err) {
