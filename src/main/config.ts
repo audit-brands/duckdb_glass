@@ -2,7 +2,7 @@
 // Loads environment variables from .env file (development only)
 
 import * as dotenv from 'dotenv';
-import { DEFAULT_RESULT_LIMIT } from '../shared/constants';
+import { DEFAULT_RESULT_LIMIT, DEFAULT_QUERY_TIMEOUT_MS } from '../shared/constants';
 
 // Load .env file if it exists (development only, not shipped with app)
 dotenv.config();
@@ -50,6 +50,10 @@ export const CONFIG = {
    */
   results: {
     maxRows: parseInt(process.env.DEFAULT_RESULT_LIMIT || `${DEFAULT_RESULT_LIMIT}`, 10),
+    maxExecutionTimeMs: parseInt(
+      process.env.DEFAULT_QUERY_TIMEOUT_MS || `${DEFAULT_QUERY_TIMEOUT_MS}`,
+      10
+    ),
   },
 
   /**

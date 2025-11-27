@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { QueryResult } from '@shared/types';
 import DataGrid from './DataGrid';
 import { getBaseName } from '../utils/path';
-import { DEFAULT_RESULT_LIMIT } from '@shared/constants';
+import { DEFAULT_RESULT_LIMIT, DEFAULT_QUERY_TIMEOUT_MS } from '@shared/constants';
 
 interface QueryEditorProps {
   profileId: string;
@@ -33,6 +33,7 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statementType, setStatementType] = useState<string>('SELECT');
+  const [timeoutMs, setTimeoutMs] = useState<string>(`${DEFAULT_QUERY_TIMEOUT_MS}`);
 
   const handleRunQuery = async () => {
     const trimmed = sql.trim();
@@ -56,11 +57,18 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
     setResult(null);
 
     try {
+      const parsedTimeout = Number(timeoutMs);
+      const maxExecutionTimeMs =
+        Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : undefined;
+
       const queryResult = await window.orbitalDb.query.run(
         profileId,
         trimmed,
         undefined,
-        { rowLimit: DEFAULT_RESULT_LIMIT }
+        {
+          rowLimit: DEFAULT_RESULT_LIMIT,
+          maxExecutionTimeMs,
+        }
       );
       setResult(queryResult);
     } catch (err) {
@@ -115,7 +123,7 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
           className="w-full h-40 p-3 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Enter your SQL query here..."
         />
-        <div className="mt-3 flex space-x-2">
+        <div className="mt-3 flex flex-wrap gap-3 items-center">
           <button onClick={handleRunQuery} disabled={loading} className="btn-primary">
             {loading ? 'Running...' : 'Run Query'}
           </button>
@@ -129,6 +137,18 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
           >
             Clear
           </button>
+          <label className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+            <span>Timeout (ms)</span>
+            <input
+              type="number"
+              min={1000}
+              step={500}
+              value={timeoutMs}
+              onChange={(e) => setTimeoutMs(e.target.value)}
+              className="w-24 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            />
+            <span className="text-[10px] text-gray-500">(0 disables)</span>
+          </label>
         </div>
       </div>
 

@@ -99,9 +99,33 @@ export class DuckDBService {
     const connection = this.getConnectionOrThrow(profileId);
     const start = performance.now();
     const rowLimit = options?.rowLimit ?? CONFIG.results.maxRows;
+    const maxExecutionTimeMs = options?.maxExecutionTimeMs ?? CONFIG.results.maxExecutionTimeMs;
+
+    let timer: NodeJS.Timeout | null = null;
+    const basePromise = connection.runAndReadAll(sql);
+    let readerPromise: Promise<Awaited<typeof basePromise>> = basePromise;
+    if (maxExecutionTimeMs > 0) {
+      basePromise.catch(() => {
+        // Swallow rejections when timeout fires; race promise will handle error.
+      });
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          try {
+            connection.interrupt();
+          } catch (interruptError) {
+            console.warn('Failed to interrupt DuckDB query:', interruptError);
+          }
+          reject(new Error(`Query exceeded the configured timeout of ${maxExecutionTimeMs}ms`));
+        }, maxExecutionTimeMs);
+      });
+      readerPromise = Promise.race([basePromise, timeoutPromise]);
+    }
 
     try {
-      const reader = await connection.runAndReadAll(sql);
+      const reader = await readerPromise;
+      if (timer) {
+        clearTimeout(timer);
+      }
       const executionTimeMs = performance.now() - start;
 
       const columnNames = reader.columnNames();

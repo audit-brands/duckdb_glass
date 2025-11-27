@@ -34,3 +34,4 @@ export const IPC_CHANNELS = {
 } as const;
 
 export const DEFAULT_RESULT_LIMIT = 1000;
+export const DEFAULT_QUERY_TIMEOUT_MS = 60000;
