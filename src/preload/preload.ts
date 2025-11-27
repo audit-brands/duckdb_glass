@@ -12,6 +12,7 @@ import type {
   ConstraintInfo,
   QueryResult,
   QueryParam,
+  QueryOptions,
 } from '../shared/types';
 
 // Expose the Orbital DB API to the renderer process
@@ -43,8 +44,12 @@ contextBridge.exposeInMainWorld('orbitalDb', {
       ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_GET_COLUMNS, profileId, schemaName, tableName),
   },
   query: {
-    run: (profileId: string, sql: string, _params?: QueryParam[]): Promise<QueryResult> =>
-      ipcRenderer.invoke(IPC_CHANNELS.QUERY_RUN, profileId, sql),
+    run: (
+      profileId: string,
+      sql: string,
+      _params?: QueryParam[],
+      options?: QueryOptions
+    ): Promise<QueryResult> => ipcRenderer.invoke(IPC_CHANNELS.QUERY_RUN, profileId, sql, options),
     exportCsv: (profileId: string, sql: string, filePath: string): Promise<number> =>
       ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_CSV, profileId, sql, filePath),
   },

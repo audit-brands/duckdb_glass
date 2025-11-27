@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../state/hooks';
-import { openConnection } from '../state/slices/profilesSlice';
+import { acquireConnection, releaseConnection } from '../state/slices/profilesSlice';
 import QueryEditor from '../components/QueryEditor';
 
 export default function QueryPage() {
@@ -15,10 +15,11 @@ export default function QueryPage() {
   );
 
   useEffect(() => {
-    if (profileId) {
-      // Ensure connection is open
-      dispatch(openConnection(profileId));
-    }
+    if (!profileId) return;
+    dispatch(acquireConnection(profileId));
+    return () => {
+      dispatch(releaseConnection(profileId));
+    };
   }, [dispatch, profileId]);
 
   if (!profile) {

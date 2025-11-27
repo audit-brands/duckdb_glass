@@ -135,13 +135,17 @@ export default function CreateDatabasePage() {
       setProgress('Opening database connection...');
       await window.orbitalDb.connection.open(profileId);
 
-      // Step 3: Import each file
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-        setProgress(`Importing ${file.fileName} (${i + 1}/${selectedFiles.length})...`);
+      try {
+        // Step 3: Import each file
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          setProgress(`Importing ${file.fileName} (${i + 1}/${selectedFiles.length})...`);
 
-        const sql = generateImportSQL(file);
-        await window.orbitalDb.query.run(profileId, sql);
+          const sql = generateImportSQL(file);
+          await window.orbitalDb.query.run(profileId, sql);
+        }
+      } finally {
+        await window.orbitalDb.connection.close(profileId);
       }
 
       setProgress('Database created successfully!');

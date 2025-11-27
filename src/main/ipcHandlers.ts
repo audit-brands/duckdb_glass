@@ -126,14 +126,17 @@ export function registerIpcHandlers(
   );
 
   // Query execution
-  ipcMain.handle(IPC_CHANNELS.QUERY_RUN, async (_event, profileId: string, sql: string) => {
-    try {
-      return await duckdbService.runQuery(profileId, sql);
-    } catch (error) {
-      console.error('Failed to execute query:', error);
-      throw error;
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_RUN,
+    async (_event, profileId: string, sql: string, options?: { rowLimit?: number }) => {
+      try {
+        return await duckdbService.runQuery(profileId, sql, options);
+      } catch (error) {
+        console.error('Failed to execute query:', error);
+        throw error;
+      }
     }
-  });
+  );
 
   ipcMain.handle(
     IPC_CHANNELS.QUERY_EXPORT_CSV,

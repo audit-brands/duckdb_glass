@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../state/hooks';
 import { loadSchemas } from '../state/slices/schemaSlice';
-import { openConnection } from '../state/slices/profilesSlice';
+import { acquireConnection, releaseConnection } from '../state/slices/profilesSlice';
 import SchemaTree from '../components/SchemaTree';
 
 export default function SchemaPage() {
@@ -16,12 +16,19 @@ export default function SchemaPage() {
   );
 
   useEffect(() => {
-    if (profileId) {
-      // Open connection and load schemas
-      dispatch(openConnection(profileId)).then(() => {
+    if (!profileId) return;
+    let cancelled = false;
+    (async () => {
+      await dispatch(acquireConnection(profileId)).unwrap();
+      if (!cancelled) {
         dispatch(loadSchemas(profileId));
-      });
-    }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      dispatch(releaseConnection(profileId));
+    };
   }, [dispatch, profileId]);
 
   if (!profile) {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../state/hooks';
-import { openConnection } from '../state/slices/profilesSlice';
+import { acquireConnection, releaseConnection } from '../state/slices/profilesSlice';
 import { getBaseName, getFileStem } from '../utils/path';
 
 type FileFormat = 'csv' | 'parquet' | 'json';
@@ -31,10 +31,11 @@ export default function ImportDataPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (profileId) {
-      // Ensure connection is open
-      dispatch(openConnection(profileId));
-    }
+    if (!profileId) return;
+    dispatch(acquireConnection(profileId));
+    return () => {
+      dispatch(releaseConnection(profileId));
+    };
   }, [dispatch, profileId]);
 
   const handleSelectFile = async () => {

@@ -2,12 +2,14 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { DuckDBProfile, DuckDBProfileInput, DuckDBProfileUpdate } from '@shared/types';
+import type { RootState } from '../store';
 
 interface ProfilesState {
   list: DuckDBProfile[];
   activeProfileId: string | null;
   loading: boolean;
   error: string | null;
+  connectionUsage: Record<string, number>;
 }
 
 const initialState: ProfilesState = {
@@ -15,6 +17,7 @@ const initialState: ProfilesState = {
   activeProfileId: null,
   loading: false,
   error: null,
+  connectionUsage: {},
 };
 
 // Async thunks
@@ -41,21 +44,31 @@ export const deleteProfile = createAsyncThunk('profiles/delete', async (id: stri
   return id;
 });
 
-export const openConnection = createAsyncThunk(
-  'profiles/openConnection',
-  async (profileId: string) => {
+export const acquireConnection = createAsyncThunk<
+  string,
+  string,
+  { state: RootState }
+>('profiles/acquireConnection', async (profileId, { getState }) => {
+  const state = getState();
+  const usage = state.profiles.connectionUsage[profileId] ?? 0;
+  if (usage === 0) {
     await window.orbitalDb.connection.open(profileId);
-    return profileId;
   }
-);
+  return profileId;
+});
 
-export const closeConnection = createAsyncThunk(
-  'profiles/closeConnection',
-  async (profileId: string) => {
+export const releaseConnection = createAsyncThunk<
+  string,
+  string,
+  { state: RootState }
+>('profiles/releaseConnection', async (profileId, { getState }) => {
+  const state = getState();
+  const usage = state.profiles.connectionUsage[profileId] ?? 0;
+  if (usage <= 1) {
     await window.orbitalDb.connection.close(profileId);
-    return profileId;
   }
-);
+  return profileId;
+});
 
 const profilesSlice = createSlice({
   name: 'profiles',
@@ -98,9 +111,22 @@ const profilesSlice = createSlice({
           state.activeProfileId = null;
         }
       })
-      // Open connection
-      .addCase(openConnection.fulfilled, (state, action) => {
-        state.activeProfileId = action.payload;
+      .addCase(acquireConnection.fulfilled, (state, action) => {
+        const id = action.payload;
+        state.connectionUsage[id] = (state.connectionUsage[id] || 0) + 1;
+        state.activeProfileId = id;
+      })
+      .addCase(releaseConnection.fulfilled, (state, action) => {
+        const id = action.payload;
+        const current = state.connectionUsage[id] || 0;
+        if (current <= 1) {
+          delete state.connectionUsage[id];
+          if (state.activeProfileId === id) {
+            state.activeProfileId = null;
+          }
+        } else {
+          state.connectionUsage[id] = current - 1;
+        }
       });
   },
 });

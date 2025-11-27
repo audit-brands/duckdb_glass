@@ -2,6 +2,7 @@
 // Loads environment variables from .env file (development only)
 
 import * as dotenv from 'dotenv';
+import { DEFAULT_RESULT_LIMIT } from '../shared/constants';
 
 // Load .env file if it exists (development only, not shipped with app)
 dotenv.config();
@@ -44,6 +45,12 @@ export const CONFIG = {
      */
     defaultThreads: parseInt(process.env.DEFAULT_THREADS || '2', 10),
   },
+  /**
+   * Query result handling
+   */
+  results: {
+    maxRows: parseInt(process.env.DEFAULT_RESULT_LIMIT || `${DEFAULT_RESULT_LIMIT}`, 10),
+  },
 
   /**
    * Feature flags for development
@@ -79,5 +86,6 @@ if (CONFIG.isDevelopment) {
     nodeEnv: CONFIG.nodeEnv,
     logLevel: CONFIG.logLevel,
     duckdb: CONFIG.duckdb,
+    results: CONFIG.results,
   });
 }

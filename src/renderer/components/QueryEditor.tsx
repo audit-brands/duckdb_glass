@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { QueryResult } from '@shared/types';
 import DataGrid from './DataGrid';
 import { getBaseName } from '../utils/path';
+import { DEFAULT_RESULT_LIMIT } from '@shared/constants';
 
 interface QueryEditorProps {
   profileId: string;
@@ -55,7 +56,12 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
     setResult(null);
 
     try {
-      const queryResult = await window.orbitalDb.query.run(profileId, trimmed);
+      const queryResult = await window.orbitalDb.query.run(
+        profileId,
+        trimmed,
+        undefined,
+        { rowLimit: DEFAULT_RESULT_LIMIT }
+      );
       setResult(queryResult);
     } catch (err) {
       setError((err as Error).message);
@@ -139,9 +145,7 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
           <div className="mb-4 flex justify-between items-center">
             <h3 className="text-lg font-semibold">Results</h3>
             <div className="flex items-center space-x-3">
-              <div className="text-sm text-gray-500">
-                {result.executionTimeMs.toFixed(2)}ms
-              </div>
+              <div className="text-sm text-gray-500">{result.executionTimeMs.toFixed(2)}ms</div>
               {result.rowCount > 0 && (
                 <button
                   onClick={handleExportCSV}
@@ -159,6 +163,11 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
             <>
               <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
                 {result.rowCount} row{result.rowCount !== 1 ? 's' : ''} returned
+                {result.truncated && (
+                  <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                    Showing first {DEFAULT_RESULT_LIMIT.toLocaleString()} rows
+                  </span>
+                )}
               </div>
               <DataGrid result={result} />
             </>
@@ -230,11 +239,16 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
                   <div className="font-medium text-gray-700 dark:text-gray-300">
                     Statement executed successfully
                   </div>
-                  {result.rowCount > 0 && (
-                    <>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-2 mb-3">
+                    {result.rowCount > 0 && (
+                      <>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-2 mb-3">
                         {result.rowCount} row{result.rowCount !== 1 ? 's' : ''} returned
-                      </div>
+                          {result.truncated && (
+                            <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                              Showing first {DEFAULT_RESULT_LIMIT.toLocaleString()} rows
+                            </span>
+                          )}
+                        </div>
                       <DataGrid result={result} />
                     </>
                   )}

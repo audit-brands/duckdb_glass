@@ -10,6 +10,7 @@ import {
   ConstraintInfo,
   QueryResult,
   QueryParam,
+  QueryOptions,
 } from '../shared/types';
 
 declare global {
@@ -35,7 +36,12 @@ declare global {
         ): Promise<ColumnInfo[]>;
       };
       query: {
-        run(profileId: string, sql: string, params?: QueryParam[]): Promise<QueryResult>;
+        run(
+          profileId: string,
+          sql: string,
+          params?: QueryParam[],
+          options?: QueryOptions
+        ): Promise<QueryResult>;
         exportCsv(profileId: string, sql: string, filePath: string): Promise<number>;
       };
       constraints: {

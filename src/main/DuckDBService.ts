@@ -9,6 +9,7 @@ import type {
   TableInfo,
   ColumnInfo,
   ConstraintInfo,
+  QueryOptions,
 } from '../shared/types';
 
 interface OpenConnection {
@@ -94,9 +95,10 @@ export class DuckDBService {
     return entry.connection;
   }
 
-  async runQuery(profileId: string, sql: string): Promise<QueryResult> {
+  async runQuery(profileId: string, sql: string, options?: QueryOptions): Promise<QueryResult> {
     const connection = this.getConnectionOrThrow(profileId);
     const start = performance.now();
+    const rowLimit = options?.rowLimit ?? CONFIG.results.maxRows;
 
     try {
       const reader = await connection.runAndReadAll(sql);
@@ -111,12 +113,19 @@ export class DuckDBService {
       }));
 
       const rows = reader.getRows();
+      let resultRows = rows;
+      let truncated = false;
+      if (rowLimit && rowLimit > 0 && rows.length > rowLimit) {
+        resultRows = rows.slice(0, rowLimit);
+        truncated = true;
+      }
 
       return {
         columns,
-        rows,
-        rowCount: rows.length,
+        rows: resultRows,
+        rowCount: resultRows.length,
         executionTimeMs,
+        truncated,
       };
     } catch (error) {
       console.error(`Query execution failed for profile ${profileId}:`, error);

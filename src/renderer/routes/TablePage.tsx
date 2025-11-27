@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { QueryResult } from '@shared/types';
 import DataGrid from '../components/DataGrid';
+import { useAppDispatch } from '../state/hooks';
+import { acquireConnection, releaseConnection } from '../state/slices/profilesSlice';
 
 export default function TablePage() {
   const { profileId, schemaName, tableName } = useParams<{
@@ -11,9 +13,18 @@ export default function TablePage() {
     schemaName: string;
     tableName: string;
   }>();
+  const dispatch = useAppDispatch();
   const [data, setData] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profileId) return;
+    dispatch(acquireConnection(profileId));
+    return () => {
+      dispatch(releaseConnection(profileId));
+    };
+  }, [dispatch, profileId]);
 
   useEffect(() => {
     const loadTableData = async () => {
@@ -48,6 +59,11 @@ export default function TablePage() {
         <div className="card">
           <div className="mb-4 text-sm text-gray-500">
             {data.rowCount} rows • {data.executionTimeMs.toFixed(2)}ms
+            {data.truncated && (
+              <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                Showing first results only
+              </span>
+            )}
           </div>
           <DataGrid result={data} />
         </div>

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { ConstraintInfo } from '@shared/types';
+import { useAppDispatch } from '../state/hooks';
+import { acquireConnection, releaseConnection } from '../state/slices/profilesSlice';
 
 export default function ConstraintsPage() {
   const { profileId, schemaName, tableName } = useParams<{
@@ -10,9 +12,18 @@ export default function ConstraintsPage() {
     schemaName: string;
     tableName: string;
   }>();
+  const dispatch = useAppDispatch();
   const [constraints, setConstraints] = useState<ConstraintInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profileId) return;
+    dispatch(acquireConnection(profileId));
+    return () => {
+      dispatch(releaseConnection(profileId));
+    };
+  }, [dispatch, profileId]);
 
   useEffect(() => {
     const loadConstraints = async () => {

@@ -37,30 +37,34 @@ export default function DatabaseOverview({ profiles }: DatabaseOverviewProps) {
     // Fetch stats for each profile
     profiles.forEach(async (profile) => {
       try {
-        // Open connection first
         await window.orbitalDb.connection.open(profile.id);
+        try {
+          const schemas = await window.orbitalDb.schema.listSchemas(profile.id);
 
-        // Get schemas
-        const schemas = await window.orbitalDb.schema.listSchemas(profile.id);
+          let totalTables = 0;
+          for (const schema of schemas) {
+            const tables = await window.orbitalDb.schema.listTables(profile.id, schema.schemaName);
+            totalTables += tables.length;
+          }
 
-        // Get tables from all schemas
-        let totalTables = 0;
-        for (const schema of schemas) {
-          const tables = await window.orbitalDb.schema.listTables(profile.id, schema.schemaName);
-          totalTables += tables.length;
-        }
-
-        setStats((prev) => {
-          const updated = new Map(prev);
-          updated.set(profile.id, {
-            profileId: profile.id,
-            tableCount: totalTables,
-            schemaCount: schemas.length,
-            loading: false,
-            error: null,
+          setStats((prev) => {
+            const updated = new Map(prev);
+            updated.set(profile.id, {
+              profileId: profile.id,
+              tableCount: totalTables,
+              schemaCount: schemas.length,
+              loading: false,
+              error: null,
+            });
+            return updated;
           });
-          return updated;
-        });
+        } finally {
+          try {
+            await window.orbitalDb.connection.close(profile.id);
+          } catch (closeError) {
+            console.warn(`Failed to close connection for profile ${profile.id}`, closeError);
+          }
+        }
       } catch (error) {
         setStats((prev) => {
           const updated = new Map(prev);

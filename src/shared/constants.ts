@@ -32,3 +32,5 @@ export const IPC_CHANNELS = {
   // App metadata
   APP_GET_VERSION: 'orbitalDb:app:getVersion',
 } as const;
+
+export const DEFAULT_RESULT_LIMIT = 1000;

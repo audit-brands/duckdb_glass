@@ -42,6 +42,7 @@ export interface QueryResult {
   rows: unknown[][];
   rowCount: number;
   executionTimeMs: number;
+  truncated?: boolean;
 }
 
 export interface ConstraintInfo {
@@ -49,6 +50,10 @@ export interface ConstraintInfo {
   constraintType: string; // e.g., PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK
   columnNames: string[];
   details?: string;
+}
+
+export interface QueryOptions {
+  rowLimit?: number;
 }
 
 // Standardized IPC response wrapper
