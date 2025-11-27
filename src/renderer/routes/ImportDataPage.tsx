@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../state/hooks';
 import { openConnection } from '../state/slices/profilesSlice';
+import { getBaseName, getFileStem } from '../utils/path';
 
 type FileFormat = 'csv' | 'parquet' | 'json';
 
@@ -38,16 +39,18 @@ export default function ImportDataPage() {
 
   const handleSelectFile = async () => {
     try {
-      const result = await window.orbitalDb.files.selectFile();
+      const files = await window.orbitalDb.files.selectDataFiles();
 
-      if (result) {
+      if (files && files.length > 0) {
+        const result = files[0];
         setSelectedFile(result);
         // Extract filename and suggest as table name
-        const fileName = result.split('/').pop()?.split('.')[0] || 'imported_data';
-        setTableName(fileName.toLowerCase().replace(/[^a-z0-9_]/g, '_'));
+        const fileStem = getFileStem(result) || 'imported_data';
+        setTableName(fileStem.toLowerCase().replace(/[^a-z0-9_]/g, '_'));
 
         // Detect format from extension
-        const ext = result.split('.').pop()?.toLowerCase();
+        const baseName = getBaseName(result);
+        const ext = baseName.split('.').pop()?.toLowerCase();
         if (ext === 'csv') setFormat('csv');
         else if (ext === 'parquet') setFormat('parquet');
         else if (ext === 'json' || ext === 'jsonl' || ext === 'ndjson') setFormat('json');
@@ -94,7 +97,7 @@ export default function ImportDataPage() {
 
     const sql = generateImportSQL({
       filePath: selectedFile,
-      fileName: selectedFile.split('/').pop() || 'file',
+      fileName: getBaseName(selectedFile) || 'file',
       format,
       tableName,
     });
@@ -227,7 +230,7 @@ export default function ImportDataPage() {
                 <pre className="text-xs text-blue-600 dark:text-blue-400 font-mono overflow-x-auto">
                   {generateImportSQL({
                     filePath: selectedFile,
-                    fileName: selectedFile.split('/').pop() || 'file',
+                    fileName: getBaseName(selectedFile) || 'file',
                     format,
                     tableName,
                   })}

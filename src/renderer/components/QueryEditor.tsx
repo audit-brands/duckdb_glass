@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { QueryResult } from '@shared/types';
 import DataGrid from './DataGrid';
+import { getBaseName } from '../utils/path';
 
 interface QueryEditorProps {
   profileId: string;
@@ -84,7 +85,8 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
       const rowCount = await window.orbitalDb.query.exportCsv(profileId, sql, filePath);
 
       // Show success feedback
-      alert(`Successfully exported ${rowCount.toLocaleString()} rows to ${filePath.split('/').pop()}`);
+      const fileName = getBaseName(filePath) || 'file';
+      alert(`Successfully exported ${rowCount.toLocaleString()} rows to ${fileName}`);
     } catch (err) {
       setError(`Export failed: ${(err as Error).message}`);
     }

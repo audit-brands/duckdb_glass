@@ -60,10 +60,9 @@ contextBridge.exposeInMainWorld('orbitalDb', {
     getVersion: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_VERSION),
   },
   files: {
-    selectFile: async (): Promise<string | null> => {
+    selectDataFiles: async (): Promise<string[] | null> => {
       const result = await ipcRenderer.invoke(IPC_CHANNELS.DIALOG_OPEN_DATA_FILE);
-      // Return the first file if any were selected
-      return result && result.length > 0 ? result[0] : null;
+      return result && result.length > 0 ? result : null;
     },
     selectDatabase: (): Promise<string | null> =>
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_OPEN_DATABASE),

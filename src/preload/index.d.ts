@@ -49,7 +49,7 @@ declare global {
         getVersion(): Promise<string>;
       };
       files: {
-        selectFile(options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }): Promise<string | null>;
+        selectDataFiles(): Promise<string[] | null>;
         selectDatabase(): Promise<string | null>;
         saveDatabaseAs(): Promise<string | null>;
         saveCsvAs(): Promise<string | null>;

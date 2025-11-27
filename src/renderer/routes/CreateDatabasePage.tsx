@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../state/hooks';
 import { createProfile } from '../state/slices/profilesSlice';
 import type { DuckDBProfileInput } from '@shared/types';
+import { getBaseName, getFileStem } from '../utils/path';
 
 type FileFormat = 'csv' | 'parquet' | 'json';
 
@@ -37,7 +38,7 @@ export default function CreateDatabasePage() {
       if (result) {
         setDatabasePath(result);
         // Extract name from path
-        const name = result.split('/').pop()?.replace(/\.(duckdb|db)$/i, '') || 'New Database';
+        const name = getBaseName(result).replace(/\.(duckdb|db)$/i, '') || 'New Database';
         setDatabaseName(name);
         setError(null);
       }
@@ -48,23 +49,26 @@ export default function CreateDatabasePage() {
 
   const handleSelectDataFiles = async () => {
     try {
-      const result = await window.orbitalDb.files.selectFile();
-      if (result) {
-        const fileName = result.split('/').pop() || 'file';
-        const ext = result.split('.').pop()?.toLowerCase();
+      const results = await window.orbitalDb.files.selectDataFiles();
+      if (results && results.length) {
+        const newFiles = results.map((filePath) => {
+          const fileName = getBaseName(filePath) || 'file';
+          const ext = fileName.split('.').pop()?.toLowerCase();
+          let format: FileFormat = 'csv';
+          if (ext === 'parquet') format = 'parquet';
+          else if (ext === 'json' || ext === 'jsonl' || ext === 'ndjson') format = 'json';
 
-        let format: FileFormat = 'csv';
-        if (ext === 'parquet') format = 'parquet';
-        else if (ext === 'json' || ext === 'jsonl' || ext === 'ndjson') format = 'json';
+          const tableName = getFileStem(fileName).toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
-        const tableName = fileName.split('.')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_');
+          return {
+            filePath,
+            fileName,
+            format,
+            tableName,
+          };
+        });
 
-        setSelectedFiles([...selectedFiles, {
-          filePath: result,
-          fileName,
-          format,
-          tableName,
-        }]);
+        setSelectedFiles((prev) => [...prev, ...newFiles]);
         setError(null);
       }
     } catch (err) {
