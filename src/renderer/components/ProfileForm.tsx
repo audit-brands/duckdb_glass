@@ -1,7 +1,8 @@
 // Profile creation/edit form
 
 import { useState } from 'react';
-import type { DuckDBProfileInput } from '@shared/types';
+import type { DuckDBProfileInput, AttachedFile } from '@shared/types';
+import AttachedFileList from './AttachedFileList';
 
 interface ProfileFormProps {
   onSubmit: (profile: DuckDBProfileInput) => void;
@@ -12,6 +13,7 @@ interface ProfileFormProps {
 export default function ProfileForm({ onSubmit, onCancel, initialValues }: ProfileFormProps) {
   const [name, setName] = useState(initialValues?.name || '');
   const [dbPath, setDbPath] = useState(initialValues?.dbPath || ':memory:');
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>(initialValues?.attachedFiles || []);
   const [error, setError] = useState<string | null>(null);
 
   const handleSelectDatabase = async () => {
@@ -52,7 +54,11 @@ export default function ProfileForm({ onSubmit, onCancel, initialValues }: Profi
     }
 
     setError(null);
-    onSubmit({ name, dbPath });
+    onSubmit({
+      name,
+      dbPath,
+      attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
+    });
   };
 
   return (
@@ -119,6 +125,13 @@ export default function ProfileForm({ onSubmit, onCancel, initialValues }: Profi
             <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
           </div>
         )}
+      </div>
+
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <AttachedFileList
+          files={attachedFiles}
+          onChange={setAttachedFiles}
+        />
       </div>
 
       <div className="flex space-x-2">

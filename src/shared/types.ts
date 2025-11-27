@@ -1,5 +1,12 @@
 // Shared TypeScript types used across main, preload, and renderer processes
 
+export interface AttachedFile {
+  id: string;
+  alias: string; // Table name used in SQL queries (e.g., "sales_data")
+  path: string; // Absolute file path or URL
+  type: 'parquet' | 'csv' | 'json' | 'auto'; // File format, 'auto' for auto-detection
+}
+
 export interface DuckDBProfile {
   id: string;
   name: string;
@@ -7,6 +14,7 @@ export interface DuckDBProfile {
   readOnly?: boolean;
   autoAttachDirs?: string[];
   extensions?: string[];
+  attachedFiles?: AttachedFile[]; // Files attached as queryable tables/views
   createdAt: string;
   updatedAt: string;
 }

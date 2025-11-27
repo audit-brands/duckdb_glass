@@ -10,6 +10,7 @@ import type {
   ColumnInfo,
   ConstraintInfo,
   QueryOptions,
+  AttachedFile,
 } from '../shared/types';
 
 interface OpenConnection {
@@ -53,9 +54,12 @@ export class DuckDBService {
         return;
       }
 
+      let instance: DuckDBInstance | undefined;
+      let connection: DuckDBConnection | undefined;
+
       try {
-        const instance = await DuckDBInstance.create(profile.dbPath);
-        const connection = await instance.connect();
+        instance = await DuckDBInstance.create(profile.dbPath);
+        connection = await instance.connect();
 
         if (profile.readOnly) {
           await connection.run('PRAGMA read_only=1;');
@@ -70,9 +74,31 @@ export class DuckDBService {
           }
         }
 
+        // Create views for attached files
+        if (profile.attachedFiles?.length) {
+          for (const file of profile.attachedFiles) {
+            await this.createAttachedFileView(connection, file);
+          }
+        }
+
         this.connections.set(profile.id, { instance, connection, profile });
         console.log(`Opened connection for profile: ${profile.id}`);
       } catch (error) {
+        // Clean up partially created resources on failure
+        if (connection) {
+          try {
+            connection.closeSync();
+          } catch (closeError) {
+            console.warn(`Failed to close connection during cleanup:`, closeError);
+          }
+        }
+        if (instance) {
+          try {
+            instance.closeSync();
+          } catch (closeError) {
+            console.warn(`Failed to close instance during cleanup:`, closeError);
+          }
+        }
         console.error(`Failed to open connection for profile ${profile.id}:`, error);
         throw error;
       }
@@ -108,6 +134,59 @@ export class DuckDBService {
 
   async destroy(): Promise<void> {
     await this.closeAllConnections();
+  }
+
+  /**
+   * Creates a view for an attached file using DuckDB's read functions.
+   * This allows querying external files (CSV, Parquet, JSON) as if they were tables.
+   */
+  private async createAttachedFileView(
+    connection: DuckDBConnection,
+    file: AttachedFile
+  ): Promise<void> {
+    const escapedPath = file.path.replace(/'/g, "''");
+    const escapedAlias = file.alias.replace(/"/g, '""');
+
+    let readFunction: string;
+
+    switch (file.type) {
+      case 'csv':
+        readFunction = `read_csv('${escapedPath}', AUTO_DETECT=TRUE)`;
+        break;
+      case 'parquet':
+        readFunction = `read_parquet('${escapedPath}')`;
+        break;
+      case 'json':
+        readFunction = `read_json('${escapedPath}', AUTO_DETECT=TRUE)`;
+        break;
+      case 'auto':
+        // Try to detect based on file extension
+        const ext = file.path.toLowerCase().split('.').pop();
+        if (ext === 'csv') {
+          readFunction = `read_csv('${escapedPath}', AUTO_DETECT=TRUE)`;
+        } else if (ext === 'parquet') {
+          readFunction = `read_parquet('${escapedPath}')`;
+        } else if (ext === 'json' || ext === 'jsonl' || ext === 'ndjson') {
+          readFunction = `read_json('${escapedPath}', AUTO_DETECT=TRUE)`;
+        } else {
+          console.warn(`Unable to auto-detect file type for ${file.path}, defaulting to CSV`);
+          readFunction = `read_csv('${escapedPath}', AUTO_DETECT=TRUE)`;
+        }
+        break;
+      default:
+        throw new Error(`Unsupported file type: ${file.type}`);
+    }
+
+    try {
+      const createViewSQL = `CREATE OR REPLACE VIEW "${escapedAlias}" AS SELECT * FROM ${readFunction}`;
+      await connection.run(createViewSQL);
+      console.log(`Created view for attached file: ${file.alias} -> ${file.path}`);
+    } catch (error) {
+      console.error(`Failed to create view for attached file ${file.alias}:`, error);
+      throw new Error(
+        `Failed to attach file "${file.alias}": ${(error as Error).message}`
+      );
+    }
   }
 
   async interruptQuery(profileId: string): Promise<void> {
