@@ -11,8 +11,8 @@ A modern desktop client for DuckDB databases, built with Electron, React, and Ty
 
 ✨ **Multiple Database Profiles** - Manage multiple DuckDB database connections
 🔍 **Schema Explorer** - Browse database schemas, tables, and columns
-📝 **Query Editor** - Write and execute custom SQL queries with syntax highlighting
-📊 **Data Grid Viewer** - View query results in an interactive table
+📝 **Query Editor** - Write and execute custom SQL queries with syntax highlighting, per-query timeouts, and a manual cancel button
+📊 **Data Grid Viewer** - View query results in an interactive table with automatic row limiting for large datasets
 🔗 **Constraints Viewer** - Inspect table constraints and relationships
 ⚙️ **Settings Management** - Customize application preferences
 🌙 **Dark Mode Support** - Built-in light and dark themes
@@ -120,6 +120,17 @@ npm run lint
 npm run format
 \`\`\`
 
+### Environment Configuration
+
+You can fine-tune resource safeguards for development by adding a `.env` file in the project root:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DEFAULT_RESULT_LIMIT` | `1000` | Maximum number of rows returned to the renderer for a query (CSV exports continue to stream the full dataset). |
+| `DEFAULT_QUERY_TIMEOUT_MS` | `60000` | Automatic query timeout in milliseconds before DuckDB interrupts execution; set to `0` to disable globally. |
+
+In addition, the Query Editor exposes per-query timeout overrides and a **Cancel Query** button for manual interruption.
+
 ## Building for Production
 
 ### Build the Application
@@ -194,8 +205,10 @@ Orbital DB follows a strict process separation model:
 
 1. From the Profiles page, click **Query** on a profile
 2. Enter your SQL query in the editor
-3. Press **Cmd/Ctrl+Enter** or click **Run Query**
-4. View results in the data grid below
+3. (Optional) Adjust the **Timeout (ms)** control to increase/decrease how long the query is allowed to run (set to `0` to disable the timeout for a single query)
+4. Press **Cmd/Ctrl+Enter** or click **Run Query**
+5. If you need to stop a running query, click **Cancel Query**; the editor will display “Query cancelled by user” when the interrupt succeeds
+6. View results in the data grid below (large result sets automatically show only the first 1,000 rows and display a truncation warning)
 
 ### Example Queries
 

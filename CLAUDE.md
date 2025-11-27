@@ -119,6 +119,12 @@ The application strictly enforces Electron's process isolation:
    - Use `closeConnection()` to clean up resources
    - `closeAllConnections()` runs on app quit
 
+### DuckDB Worker Thread & Query Controls
+
+- **Worker Offloading**: DuckDB now runs inside `src/main/workers/duckdbWorker.ts`, spawned through `DuckDBWorkerClient`. All heavy operations (queries, exports, introspection) execute off the main thread via a simple RPC protocol. Do not bypass this client; instantiate `DuckDBWorkerClient` and depend on the `DuckDBExecutor` interface when adding new functionality.
+- **Query Limits**: The worker enforces a configurable row cap (default 1,000) and returns a `truncated` flag in `QueryResult`. Keep renderer grids aware of this flag when building new views.
+- **Timeouts & Cancellation**: `runQuery` accepts `QueryOptions` with `maxExecutionTimeMs`. The worker races the DuckDB call against a timer and invokes `connection.interrupt()` when the timeout elapses. The renderer also exposes a **Cancel Query** button that calls the `interruptQuery` RPC directly. When adding new query surfaces, be sure to pass along timeout/limit options and surface cancellation affordances.
+
 ## DuckDB Service API
 
 The `DuckDBService` class (`src/main/DuckDBService.ts`) provides:
