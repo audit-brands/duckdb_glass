@@ -159,7 +159,7 @@ export class DuckDBService {
       case 'json':
         readFunction = `read_json('${escapedPath}', AUTO_DETECT=TRUE)`;
         break;
-      case 'auto':
+      case 'auto': {
         // Try to detect based on file extension
         const ext = file.path.toLowerCase().split('.').pop();
         if (ext === 'csv') {
@@ -173,6 +173,7 @@ export class DuckDBService {
           readFunction = `read_csv('${escapedPath}', AUTO_DETECT=TRUE)`;
         }
         break;
+      }
       default:
         throw new Error(`Unsupported file type: ${file.type}`);
     }
