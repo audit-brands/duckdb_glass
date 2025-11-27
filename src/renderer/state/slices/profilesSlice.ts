@@ -26,6 +26,10 @@ const initialState: ProfilesState = {
   connectionErrors: {},
 };
 
+// Connection keepalive: delay closing connections to prevent rapid open/close cycles during navigation
+const CONNECTION_KEEPALIVE_MS = 1000; // Keep connections alive for 1 second after last release
+const closeTimers = new Map<string, NodeJS.Timeout>();
+
 // Async thunks
 export const loadProfiles = createAsyncThunk('profiles/load', async () => {
   return await window.orbitalDb.profiles.list();
@@ -55,6 +59,13 @@ export const acquireConnection = createAsyncThunk<
   string,
   { state: RootState }
 >('profiles/acquireConnection', async (profileId, { getState }) => {
+  // Cancel any pending close timer for this profile
+  const existingTimer = closeTimers.get(profileId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    closeTimers.delete(profileId);
+  }
+
   const state = getState();
   const usage = state.profiles.connectionUsage[profileId] ?? 0;
   if (usage === 0) {
@@ -70,9 +81,31 @@ export const releaseConnection = createAsyncThunk<
 >('profiles/releaseConnection', async (profileId, { getState }) => {
   const state = getState();
   const usage = state.profiles.connectionUsage[profileId] ?? 0;
+
+  // If this is the last release, schedule a delayed close instead of closing immediately
   if (usage <= 1) {
-    await window.orbitalDb.connection.close(profileId);
+    // Cancel any existing timer
+    const existingTimer = closeTimers.get(profileId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Schedule the actual close after keepalive period
+    const timer = setTimeout(() => {
+      closeTimers.delete(profileId);
+      // Double-check usage count hasn't increased during the delay
+      const currentState = getState();
+      const currentUsage = currentState.profiles.connectionUsage[profileId] ?? 0;
+      if (currentUsage === 0) {
+        window.orbitalDb.connection.close(profileId).catch((error) => {
+          console.warn(`Failed to close connection for profile ${profileId}:`, error);
+        });
+      }
+    }, CONNECTION_KEEPALIVE_MS);
+
+    closeTimers.set(profileId, timer);
   }
+
   return profileId;
 });
 
