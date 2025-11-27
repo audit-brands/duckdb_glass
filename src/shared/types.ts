@@ -7,6 +7,17 @@ export interface AttachedFile {
   type: 'parquet' | 'csv' | 'json' | 'auto'; // File format, 'auto' for auto-detection
 }
 
+export interface QueryHistoryEntry {
+  id: string;
+  sql: string;
+  timestamp: number; // Unix timestamp in milliseconds
+  executionTimeMs: number;
+  rowCount: number;
+  statementType?: StatementType;
+  success: boolean;
+  error?: string; // Error message if query failed
+}
+
 export interface DuckDBProfile {
   id: string;
   name: string;
@@ -15,6 +26,7 @@ export interface DuckDBProfile {
   autoAttachDirs?: string[];
   extensions?: string[];
   attachedFiles?: AttachedFile[]; // Files attached as queryable tables/views
+  queryHistory?: QueryHistoryEntry[]; // Last N queries executed on this profile
   createdAt: string;
   updatedAt: string;
 }

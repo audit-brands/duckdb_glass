@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import type { QueryResult, StatementType } from '@shared/types';
 import DataGrid from './DataGrid';
+import QueryHistory from './QueryHistory';
 import { getBaseName } from '../utils/path';
 import { DEFAULT_RESULT_LIMIT, DEFAULT_QUERY_TIMEOUT_MS } from '@shared/constants';
 
@@ -62,16 +63,67 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
         if (isReadOnly && queryResult.statementType && MUTATING_STATEMENT_TYPES.has(queryResult.statementType)) {
           setError(`This profile is read-only. ${queryResult.statementType} statements are not allowed.`);
           setResult(null);
+
+          // Record failed query in history
+          window.orbitalDb.queryHistory.add(profileId, {
+            sql: trimmed,
+            timestamp: Date.now(),
+            executionTimeMs: queryResult.executionTimeMs,
+            rowCount: 0,
+            statementType: queryResult.statementType,
+            success: false,
+            error: `This profile is read-only. ${queryResult.statementType} statements are not allowed.`,
+          }).catch(err => {
+            console.error('Failed to record query history:', err);
+          });
+
           return;
         }
 
         setResult(queryResult);
+
+        // Record successful query in history
+        window.orbitalDb.queryHistory.add(profileId, {
+          sql: trimmed,
+          timestamp: Date.now(),
+          executionTimeMs: queryResult.executionTimeMs,
+          rowCount: queryResult.rowCount,
+          statementType: queryResult.statementType,
+          success: true,
+        }).catch(err => {
+          console.error('Failed to record query history:', err);
+        });
       })
       .catch((err) => {
         if (cancelRequestedRef.current) {
           setError('Query cancelled by user');
+
+          // Record cancelled query in history
+          window.orbitalDb.queryHistory.add(profileId, {
+            sql: trimmed,
+            timestamp: Date.now(),
+            executionTimeMs: 0,
+            rowCount: 0,
+            success: false,
+            error: 'Query cancelled by user',
+          }).catch(historyErr => {
+            console.error('Failed to record query history:', historyErr);
+          });
         } else {
-          setError((err as Error).message);
+          const errorMessage = (err as Error).message;
+          setError(errorMessage);
+
+          // Record failed query in history
+          window.orbitalDb.queryHistory.add(profileId, {
+            sql: trimmed,
+            timestamp: Date.now(),
+            executionTimeMs: 0,
+            rowCount: 0,
+            success: false,
+            error: errorMessage,
+          }).catch(historyErr => {
+            console.error('Failed to record query history:', historyErr);
+          });
         }
       })
       .finally(() => {
@@ -125,6 +177,12 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
     } catch (err) {
       setError(`Export failed: ${(err as Error).message}`);
     }
+  };
+
+  const handleSelectHistoryQuery = (historySql: string) => {
+    setSql(historySql);
+    setError(null);
+    setResult(null);
   };
 
   return (
@@ -314,6 +372,9 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
           Enter a SQL query and click &quot;Run Query&quot; or press Cmd/Ctrl+Enter to see results
         </div>
       )}
+
+      {/* Query History */}
+      <QueryHistory profileId={profileId} onSelectQuery={handleSelectHistoryQuery} />
     </div>
   );
 }

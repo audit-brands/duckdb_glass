@@ -24,6 +24,11 @@ export const IPC_CHANNELS = {
   QUERY_EXPORT_CSV: 'orbitalDb:query:exportCsv',
   QUERY_CANCEL: 'orbitalDb:query:cancel',
 
+  // Query history
+  QUERY_HISTORY_ADD: 'orbitalDb:queryHistory:add',
+  QUERY_HISTORY_GET: 'orbitalDb:queryHistory:get',
+  QUERY_HISTORY_CLEAR: 'orbitalDb:queryHistory:clear',
+
   // File dialogs
   DIALOG_OPEN_DATABASE: 'orbitalDb:dialog:openDatabase',
   DIALOG_SAVE_DATABASE: 'orbitalDb:dialog:saveDatabase',

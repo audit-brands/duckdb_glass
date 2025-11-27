@@ -13,6 +13,7 @@ import type {
   QueryResult,
   QueryParam,
   QueryOptions,
+  QueryHistoryEntry,
 } from '../shared/types';
 
 // Expose the Orbital DB API to the renderer process
@@ -54,6 +55,17 @@ contextBridge.exposeInMainWorld('orbitalDb', {
       ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_CSV, profileId, sql, filePath),
     cancel: (profileId: string): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.QUERY_CANCEL, profileId),
+  },
+  queryHistory: {
+    add: (
+      profileId: string,
+      entry: Omit<QueryHistoryEntry, 'id'>
+    ): Promise<QueryHistoryEntry> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_HISTORY_ADD, profileId, entry),
+    get: (profileId: string): Promise<QueryHistoryEntry[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_HISTORY_GET, profileId),
+    clear: (profileId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_HISTORY_CLEAR, profileId),
   },
   constraints: {
     list: (

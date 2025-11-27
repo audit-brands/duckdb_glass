@@ -4,7 +4,9 @@ import { ipcMain, app, dialog } from 'electron';
 import { IPC_CHANNELS } from '../shared/constants';
 import type { DuckDBExecutor } from './DuckDBWorkerClient';
 import type { ProfileStore } from './ProfileStore';
-import type { DuckDBProfileInput, DuckDBProfileUpdate } from '../shared/types';
+import type { DuckDBProfileInput, DuckDBProfileUpdate, QueryHistoryEntry } from '../shared/types';
+
+const MAX_QUERY_HISTORY_PER_PROFILE = 50;
 
 export function registerIpcHandlers(
   duckdbService: DuckDBExecutor,
@@ -250,6 +252,55 @@ export function registerIpcHandlers(
       return result.filePath;
     } catch (error) {
       console.error('Failed to open save CSV dialog:', error);
+      throw error;
+    }
+  });
+
+  // Query history management
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_HISTORY_ADD,
+    async (_event, profileId: string, entry: Omit<QueryHistoryEntry, 'id'>) => {
+      try {
+        const profile = await profileStore.getProfile(profileId);
+        if (!profile) {
+          throw new Error(`Profile not found: ${profileId}`);
+        }
+
+        const newEntry: QueryHistoryEntry = {
+          ...entry,
+          id: `qh_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        };
+
+        const history = profile.queryHistory || [];
+        const updatedHistory = [newEntry, ...history].slice(0, MAX_QUERY_HISTORY_PER_PROFILE);
+
+        await profileStore.updateProfile(profileId, { queryHistory: updatedHistory });
+        return newEntry;
+      } catch (error) {
+        console.error('Failed to add query history entry:', error);
+        throw error;
+      }
+    }
+  );
+
+  ipcMain.handle(IPC_CHANNELS.QUERY_HISTORY_GET, async (_event, profileId: string) => {
+    try {
+      const profile = await profileStore.getProfile(profileId);
+      if (!profile) {
+        throw new Error(`Profile not found: ${profileId}`);
+      }
+      return profile.queryHistory || [];
+    } catch (error) {
+      console.error('Failed to get query history:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.QUERY_HISTORY_CLEAR, async (_event, profileId: string) => {
+    try {
+      await profileStore.updateProfile(profileId, { queryHistory: [] });
+    } catch (error) {
+      console.error('Failed to clear query history:', error);
       throw error;
     }
   });

@@ -11,6 +11,7 @@ import {
   QueryResult,
   QueryParam,
   QueryOptions,
+  QueryHistoryEntry,
 } from '../shared/types';
 
 declare global {
@@ -44,6 +45,11 @@ declare global {
         ): Promise<QueryResult>;
         exportCsv(profileId: string, sql: string, filePath: string): Promise<number>;
         cancel(profileId: string): Promise<void>;
+      };
+      queryHistory: {
+        add(profileId: string, entry: Omit<QueryHistoryEntry, 'id'>): Promise<QueryHistoryEntry>;
+        get(profileId: string): Promise<QueryHistoryEntry[]>;
+        clear(profileId: string): Promise<void>;
       };
       constraints: {
         list(
