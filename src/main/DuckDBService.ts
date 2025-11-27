@@ -20,62 +20,83 @@ interface OpenConnection {
 
 export class DuckDBService {
   private connections = new Map<string, OpenConnection>();
+  private profileLocks = new Map<string, Promise<void>>();
 
-  async openConnection(profile: DuckDBProfile): Promise<void> {
-    // If connection already exists, return early
-    if (this.connections.has(profile.id)) {
-      console.log(`Connection already open for profile: ${profile.id}`);
-      return;
-    }
+  private async withProfileLock<T>(profileId: string, fn: () => Promise<T>): Promise<T> {
+    const previous = this.profileLocks.get(profileId) ?? Promise.resolve();
+    let release: (() => void) | undefined;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
 
+    const chained = previous
+      .catch(() => undefined)
+      .then(() => current);
+
+    this.profileLocks.set(profileId, chained);
+
+    await previous.catch(() => undefined);
     try {
-      // Create DuckDB instance with default configuration from environment
-      // Note: DuckDB configuration is set via PRAGMA statements after connection
-      const instance = await DuckDBInstance.create(profile.dbPath);
-      const connection = await instance.connect();
-
-      // Enforce read-only mode when requested
-      if (profile.readOnly) {
-        await connection.run('PRAGMA read_only=1;');
+      return await fn();
+    } finally {
+      release?.();
+      if (this.profileLocks.get(profileId) === chained) {
+        this.profileLocks.delete(profileId);
       }
-
-      // Configure DuckDB settings from environment defaults
-      // These can be overridden per-connection or via user settings in the future
-      await connection.run(`PRAGMA memory_limit='${CONFIG.duckdb.defaultMemoryLimit}';`);
-      await connection.run(`PRAGMA threads=${CONFIG.duckdb.defaultThreads};`);
-
-      // Load extensions if configured
-      if (profile.extensions?.length) {
-        for (const ext of profile.extensions) {
-          await connection.run(`LOAD '${ext}';`);
-        }
-      }
-
-      // Store connection
-      this.connections.set(profile.id, { instance, connection, profile });
-      console.log(`Opened connection for profile: ${profile.id}`);
-    } catch (error) {
-      console.error(`Failed to open connection for profile ${profile.id}:`, error);
-      throw error;
     }
   }
 
-  async closeConnection(profileId: string): Promise<void> {
-    const entry = this.connections.get(profileId);
-    if (!entry) {
-      console.warn(`No connection found for profile: ${profileId}`);
-      return;
-    }
+  async openConnection(profile: DuckDBProfile): Promise<void> {
+    await this.withProfileLock(profile.id, async () => {
+      if (this.connections.has(profile.id)) {
+        console.log(`Connection already open for profile: ${profile.id}`);
+        return;
+      }
 
-    try {
-      entry.connection.closeSync();
-      entry.instance.closeSync();
-      this.connections.delete(profileId);
-      console.log(`Closed connection for profile: ${profileId}`);
-    } catch (error) {
-      console.error(`Failed to close connection for profile ${profileId}:`, error);
-      throw error;
-    }
+      try {
+        const instance = await DuckDBInstance.create(profile.dbPath);
+        const connection = await instance.connect();
+
+        if (profile.readOnly) {
+          await connection.run('PRAGMA read_only=1;');
+        }
+
+        await connection.run(`PRAGMA memory_limit='${CONFIG.duckdb.defaultMemoryLimit}';`);
+        await connection.run(`PRAGMA threads=${CONFIG.duckdb.defaultThreads};`);
+
+        if (profile.extensions?.length) {
+          for (const ext of profile.extensions) {
+            await connection.run(`LOAD '${ext}';`);
+          }
+        }
+
+        this.connections.set(profile.id, { instance, connection, profile });
+        console.log(`Opened connection for profile: ${profile.id}`);
+      } catch (error) {
+        console.error(`Failed to open connection for profile ${profile.id}:`, error);
+        throw error;
+      }
+    });
+  }
+
+  async closeConnection(profileId: string): Promise<void> {
+    await this.withProfileLock(profileId, async () => {
+      const entry = this.connections.get(profileId);
+      if (!entry) {
+        console.warn(`No connection found for profile: ${profileId}`);
+        return;
+      }
+
+      try {
+        entry.connection.closeSync();
+        entry.instance.closeSync();
+        this.connections.delete(profileId);
+        console.log(`Closed connection for profile: ${profileId}`);
+      } catch (error) {
+        console.error(`Failed to close connection for profile ${profileId}:`, error);
+        throw error;
+      }
+    });
   }
 
   async closeAllConnections(): Promise<void> {
@@ -83,6 +104,10 @@ export class DuckDBService {
       this.closeConnection(profileId)
     );
     await Promise.all(closePromises);
+  }
+
+  async destroy(): Promise<void> {
+    await this.closeAllConnections();
   }
 
   async interruptQuery(profileId: string): Promise<void> {
@@ -110,71 +135,73 @@ export class DuckDBService {
   }
 
   async runQuery(profileId: string, sql: string, options?: QueryOptions): Promise<QueryResult> {
-    const connection = this.getConnectionOrThrow(profileId);
-    const start = performance.now();
-    const rowLimit = options?.rowLimit ?? CONFIG.results.maxRows;
-    const maxExecutionTimeMs = options?.maxExecutionTimeMs ?? CONFIG.results.maxExecutionTimeMs;
-    const enforceLimit = Boolean(options?.enforceResultLimit);
+    return this.withProfileLock(profileId, async () => {
+      const connection = this.getConnectionOrThrow(profileId);
+      const start = performance.now();
+      const rowLimit = options?.rowLimit ?? CONFIG.results.maxRows;
+      const maxExecutionTimeMs = options?.maxExecutionTimeMs ?? CONFIG.results.maxExecutionTimeMs;
+      const enforceLimit = Boolean(options?.enforceResultLimit);
 
-    const { wrappedSql, limitApplied } = maybeWrapQueryWithLimit(sql, rowLimit, enforceLimit);
-    const sqlToExecute = limitApplied ? wrappedSql : sql;
+      const { wrappedSql, limitApplied } = maybeWrapQueryWithLimit(sql, rowLimit, enforceLimit);
+      const sqlToExecute = limitApplied ? wrappedSql : sql;
 
-    let timer: NodeJS.Timeout | null = null;
-    const basePromise = connection.runAndReadAll(sqlToExecute);
-    let readerPromise: Promise<Awaited<typeof basePromise>> = basePromise;
-    if (maxExecutionTimeMs > 0) {
-      basePromise.catch(() => {
-        // Swallow rejections when timeout fires; race promise will handle error.
-      });
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => {
-          try {
-            connection.interrupt();
-          } catch (interruptError) {
-            console.warn('Failed to interrupt DuckDB query:', interruptError);
-          }
-          reject(new Error(`Query exceeded the configured timeout of ${maxExecutionTimeMs}ms`));
-        }, maxExecutionTimeMs);
-      });
-      readerPromise = Promise.race([basePromise, timeoutPromise]);
-    }
-
-    try {
-      const reader = await readerPromise;
-      if (timer) {
-        clearTimeout(timer);
+      let timer: NodeJS.Timeout | null = null;
+      const basePromise = connection.runAndReadAll(sqlToExecute);
+      let readerPromise: Promise<Awaited<typeof basePromise>> = basePromise;
+      if (maxExecutionTimeMs > 0) {
+        basePromise.catch(() => {
+          // Swallow rejections when timeout fires; race promise will handle error.
+        });
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            try {
+              connection.interrupt();
+            } catch (interruptError) {
+              console.warn('Failed to interrupt DuckDB query:', interruptError);
+            }
+            reject(new Error(`Query exceeded the configured timeout of ${maxExecutionTimeMs}ms`));
+          }, maxExecutionTimeMs);
+        });
+        readerPromise = Promise.race([basePromise, timeoutPromise]);
       }
-      const executionTimeMs = performance.now() - start;
 
-      const columnNames = reader.columnNames();
-      const columnTypes = reader.columnTypes();
-
-      const columns = columnNames.map((name, index) => ({
-        name,
-        dataType: columnTypes[index].toString(),
-      }));
-
-      const rows = reader.getRows();
-      let resultRows = rows;
-      let truncated = false;
-      if (rowLimit && rowLimit > 0) {
-        if (rows.length > rowLimit) {
-          resultRows = rows.slice(0, rowLimit);
-          truncated = true;
+      try {
+        const reader = await readerPromise;
+        if (timer) {
+          clearTimeout(timer);
         }
-      }
+        const executionTimeMs = performance.now() - start;
 
-      return {
-        columns,
-        rows: resultRows,
-        rowCount: resultRows.length,
-        executionTimeMs,
-        truncated,
-      };
-    } catch (error) {
-      console.error(`Query execution failed for profile ${profileId}:`, error);
-      throw error;
-    }
+        const columnNames = reader.columnNames();
+        const columnTypes = reader.columnTypes();
+
+        const columns = columnNames.map((name, index) => ({
+          name,
+          dataType: columnTypes[index].toString(),
+        }));
+
+        const rows = reader.getRows();
+        let resultRows = rows;
+        let truncated = false;
+        if (rowLimit && rowLimit > 0) {
+          if (rows.length > rowLimit) {
+            resultRows = rows.slice(0, rowLimit);
+            truncated = true;
+          }
+        }
+
+        return {
+          columns,
+          rows: resultRows,
+          rowCount: resultRows.length,
+          executionTimeMs,
+          truncated,
+        };
+      } catch (error) {
+        console.error(`Query execution failed for profile ${profileId}:`, error);
+        throw error;
+      }
+    });
   }
 
   async listSchemas(profileId: string): Promise<SchemaInfo[]> {
@@ -258,33 +285,30 @@ export class DuckDBService {
    * @returns The number of rows exported
    */
   async exportToCsv(profileId: string, sql: string, filePath: string): Promise<number> {
-    const connection = this.getConnectionOrThrow(profileId);
+    return this.withProfileLock(profileId, async () => {
+      const connection = this.getConnectionOrThrow(profileId);
 
-    try {
-      // Escape single quotes in file path
-      const escapedPath = filePath.replace(/'/g, "''");
+      try {
+        const escapedPath = filePath.replace(/'/g, "''");
+        const copySQL = `COPY (${sql}) TO '${escapedPath}' (HEADER, DELIMITER ',');`;
 
-      // Use DuckDB's native COPY TO command for efficient streaming export
-      // This writes directly to disk without loading all data into memory
-      const copySQL = `COPY (${sql}) TO '${escapedPath}' (HEADER, DELIMITER ',');`;
+        const start = performance.now();
+        await connection.run(copySQL);
+        const executionTimeMs = performance.now() - start;
 
-      const start = performance.now();
-      await connection.run(copySQL);
-      const executionTimeMs = performance.now() - start;
+        console.log(`Exported query results to ${filePath} in ${executionTimeMs.toFixed(2)}ms`);
 
-      console.log(`Exported query results to ${filePath} in ${executionTimeMs.toFixed(2)}ms`);
+        const countSQL = `SELECT COUNT(*) FROM (${sql})`;
+        const countReader = await connection.runAndReadAll(countSQL);
+        const rows = countReader.getRows();
+        const rowCount = Number(rows[0][0]);
 
-      // Get row count by querying the result
-      const countSQL = `SELECT COUNT(*) FROM (${sql})`;
-      const countReader = await connection.runAndReadAll(countSQL);
-      const rows = countReader.getRows();
-      const rowCount = Number(rows[0][0]);
-
-      return rowCount;
-    } catch (error) {
-      console.error(`CSV export failed for profile ${profileId}:`, error);
-      throw error;
-    }
+        return rowCount;
+      } catch (error) {
+        console.error(`CSV export failed for profile ${profileId}:`, error);
+        throw error;
+      }
+    });
   }
 }
 

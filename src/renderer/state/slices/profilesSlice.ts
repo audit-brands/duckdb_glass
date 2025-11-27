@@ -4,12 +4,16 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { DuckDBProfile, DuckDBProfileInput, DuckDBProfileUpdate } from '@shared/types';
 import type { RootState } from '../store';
 
+type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'failed';
+
 interface ProfilesState {
   list: DuckDBProfile[];
   activeProfileId: string | null;
   loading: boolean;
   error: string | null;
   connectionUsage: Record<string, number>;
+  connectionStatus: Record<string, ConnectionStatus>;
+  connectionErrors: Record<string, string | undefined>;
 }
 
 const initialState: ProfilesState = {
@@ -18,6 +22,8 @@ const initialState: ProfilesState = {
   loading: false,
   error: null,
   connectionUsage: {},
+  connectionStatus: {},
+  connectionErrors: {},
 };
 
 // Async thunks
@@ -80,6 +86,12 @@ const profilesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(acquireConnection.pending, (state, action) => {
+        const id = action.meta.arg;
+        state.connectionStatus[id] = 'connecting';
+        delete state.connectionErrors[id];
+        state.activeProfileId = id;
+      })
       // Load profiles
       .addCase(loadProfiles.pending, (state) => {
         state.loading = true;
@@ -111,16 +123,28 @@ const profilesSlice = createSlice({
           state.activeProfileId = null;
         }
       })
+      .addCase(acquireConnection.rejected, (state, action) => {
+        const id = action.meta.arg;
+        const message = action.error.message || 'Failed to connect to database';
+        state.connectionStatus[id] = 'failed';
+        state.connectionErrors[id] = message;
+        state.error = message;
+        state.loading = false;
+      })
       .addCase(acquireConnection.fulfilled, (state, action) => {
         const id = action.payload;
         state.connectionUsage[id] = (state.connectionUsage[id] || 0) + 1;
         state.activeProfileId = id;
+        state.connectionStatus[id] = 'connected';
+        delete state.connectionErrors[id];
       })
       .addCase(releaseConnection.fulfilled, (state, action) => {
         const id = action.payload;
         const current = state.connectionUsage[id] || 0;
         if (current <= 1) {
           delete state.connectionUsage[id];
+          delete state.connectionStatus[id];
+          delete state.connectionErrors[id];
           if (state.activeProfileId === id) {
             state.activeProfileId = null;
           }

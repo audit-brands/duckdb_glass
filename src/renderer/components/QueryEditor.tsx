@@ -35,6 +35,7 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
   const [statementType, setStatementType] = useState<string>('SELECT');
   const [timeoutMs, setTimeoutMs] = useState<string>(`${DEFAULT_QUERY_TIMEOUT_MS}`);
   const cancelRequestedRef = useRef(false);
+  const currentRunRef = useRef<Promise<QueryResult> | null>(null);
 
   const handleRunQuery = async () => {
     const trimmed = sql.trim();
@@ -58,31 +59,43 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
     setError(null);
     setResult(null);
 
-    try {
-      const parsedTimeout = Number(timeoutMs);
-      const maxExecutionTimeMs =
-        Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : undefined;
+    const parsedTimeout = Number(timeoutMs);
+    const maxExecutionTimeMs =
+      Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : undefined;
 
-      const queryResult = await window.orbitalDb.query.run(
-        profileId,
-        trimmed,
-        undefined,
-        {
-          rowLimit: DEFAULT_RESULT_LIMIT,
-          maxExecutionTimeMs,
-          enforceResultLimit: true,
-        }
-      );
-      setResult(queryResult);
-    } catch (err) {
-      if (cancelRequestedRef.current) {
-        setError('Query cancelled by user');
-      } else {
-        setError((err as Error).message);
+    const runPromise = window.orbitalDb.query.run(
+      profileId,
+      trimmed,
+      undefined,
+      {
+        rowLimit: DEFAULT_RESULT_LIMIT,
+        maxExecutionTimeMs,
+        enforceResultLimit: true,
       }
-    } finally {
-      setLoading(false);
-    }
+    );
+
+    currentRunRef.current = runPromise;
+
+    runPromise
+      .then((queryResult) => {
+        if (cancelRequestedRef.current || currentRunRef.current !== runPromise) {
+          return;
+        }
+        setResult(queryResult);
+      })
+      .catch((err) => {
+        if (cancelRequestedRef.current) {
+          setError('Query cancelled by user');
+        } else {
+          setError((err as Error).message);
+        }
+      })
+      .finally(() => {
+        if (currentRunRef.current === runPromise) {
+          currentRunRef.current = null;
+          setLoading(false);
+        }
+      });
   };
 
   const handleCancelQuery = async () => {
@@ -94,6 +107,11 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
       await window.orbitalDb.query.cancel(profileId);
     } catch (err) {
       console.error('Failed to cancel query:', err);
+    } finally {
+      currentRunRef.current = null;
+      setLoading(false);
+      setResult(null);
+      setError('Query cancelled by user');
     }
   };
 

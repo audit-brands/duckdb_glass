@@ -19,6 +19,7 @@ export default function ImportDataPage() {
   const { profileId } = useParams<{ profileId: string }>();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const electronApi = typeof window !== 'undefined' ? window.orbitalDb : undefined;
   const profile = useAppSelector((state) =>
     state.profiles.list.find((p) => p.id === profileId)
   );
@@ -39,17 +40,16 @@ export default function ImportDataPage() {
   }, [dispatch, profileId]);
 
   const handleSelectFile = async () => {
+    if (!electronApi) return;
     try {
-      const files = await window.orbitalDb.files.selectDataFiles();
+      const files = await electronApi.files.selectDataFiles();
 
       if (files && files.length > 0) {
         const result = files[0];
         setSelectedFile(result);
-        // Extract filename and suggest as table name
         const fileStem = getFileStem(result) || 'imported_data';
         setTableName(fileStem.toLowerCase().replace(/[^a-z0-9_]/g, '_'));
 
-        // Detect format from extension
         const baseName = getBaseName(result);
         const ext = baseName.split('.').pop()?.toLowerCase();
         if (ext === 'csv') setFormat('csv');
@@ -86,9 +86,13 @@ export default function ImportDataPage() {
       return;
     }
 
-    // Validate table name
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
       setError('Invalid table name. Use only letters, numbers, and underscores. Must start with a letter or underscore.');
+      return;
+    }
+
+    if (!electronApi) {
+      setError('Electron APIs are unavailable. Please run the packaged app to import data.');
       return;
     }
 
@@ -104,7 +108,7 @@ export default function ImportDataPage() {
     });
 
     try {
-      await window.orbitalDb.query.run(profileId, sql);
+      await electronApi.query.run(profileId, sql);
       setSuccess(true);
       setError(null);
     } catch (err) {
@@ -130,6 +134,17 @@ export default function ImportDataPage() {
         <button onClick={() => navigate('/profiles')} className="btn-primary">
           Go to Profiles
         </button>
+      </div>
+    );
+  }
+
+  if (!electronApi) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="card bg-yellow-50 border border-yellow-200">
+          <h1 className="text-2xl font-bold mb-2">Electron APIs Unavailable</h1>
+          <p className="text-yellow-800">Data import requires the Electron runtime. Please run the packaged Orbital DB application or start the Electron dev shell instead of visiting the Vite dev server in a browser tab.</p>
+        </div>
       </div>
     );
   }
@@ -166,7 +181,6 @@ export default function ImportDataPage() {
         </p>
       </div>
 
-      {/* File Selection */}
       <div className="card mb-4">
         <h2 className="text-lg font-semibold mb-4">1. Select Data File</h2>
         <div className="space-y-4">
@@ -187,7 +201,6 @@ export default function ImportDataPage() {
         </div>
       </div>
 
-      {/* Format & Table Name */}
       {selectedFile && (
         <div className="card mb-4">
           <h2 className="text-lg font-semibold mb-4">2. Configure Import</h2>
@@ -242,7 +255,6 @@ export default function ImportDataPage() {
         </div>
       )}
 
-      {/* Import Button */}
       {selectedFile && tableName && (
         <div className="card mb-4">
           <h2 className="text-lg font-semibold mb-4">3. Import</h2>
@@ -261,7 +273,6 @@ export default function ImportDataPage() {
         </div>
       )}
 
-      {/* Error Display */}
       {error && (
         <div className="card bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
           <div className="text-red-700 dark:text-red-400 font-medium mb-1">Import Error</div>
@@ -269,7 +280,6 @@ export default function ImportDataPage() {
         </div>
       )}
 
-      {/* Success Display */}
       {success && (
         <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <div className="flex items-center space-x-2">
@@ -279,7 +289,7 @@ export default function ImportDataPage() {
                 Data imported successfully!
               </div>
               <div className="text-sm text-green-600 dark:text-green-400 mt-1">
-                Table &quot;{tableName}&quot; has been created.
+                Table "{tableName}" has been created.
               </div>
               <div className="mt-3 flex space-x-2">
                 <button
@@ -300,7 +310,6 @@ export default function ImportDataPage() {
         </div>
       )}
 
-      {/* Help Section */}
       {!selectedFile && (
         <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">

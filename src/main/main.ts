@@ -2,13 +2,26 @@
 
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { DuckDBWorkerClient } from './DuckDBWorkerClient';
+import { DuckDBService } from './DuckDBService';
 import { ProfileStore } from './ProfileStore';
 import { registerIpcHandlers } from './ipcHandlers';
 
 // Initialize services
 let mainWindow: BrowserWindow | null = null;
-const duckdbService = new DuckDBWorkerClient();
+
+// TEMPORARY: Worker thread disabled due to DuckDB threading crashes (see commit history)
+// TODO: Re-enable with proper synchronization to prevent concurrent access to connections
+// function createDuckDbExecutor(): DuckDBExecutor {
+//   try {
+//     return new DuckDBWorkerClient();
+//   } catch (error) {
+//     console.warn('Failed to initialize DuckDB worker, falling back to in-process service:', error);
+//     return new DuckDBService();
+//   }
+// }
+// const duckdbService = createDuckDbExecutor();
+
+const duckdbService = new DuckDBService();
 const profileStore = new ProfileStore();
 
 function createMainWindow(): void {

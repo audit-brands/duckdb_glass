@@ -20,6 +20,15 @@ export default function CreateDatabasePage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
+  const electronApi = typeof window !== 'undefined' ? window.orbitalDb : null;
+
+  const requireElectronApi = () => {
+    if (!electronApi) {
+      throw new Error('Electron APIs are unavailable in this environment.');
+    }
+    return electronApi;
+  };
+
   // Step 1: Database location
   const [databaseName, setDatabaseName] = useState('');
   const [databasePath, setDatabasePath] = useState('');
@@ -34,7 +43,8 @@ export default function CreateDatabasePage() {
 
   const handleSelectDatabaseLocation = async () => {
     try {
-      const result = await window.orbitalDb.files.saveDatabaseAs();
+      const api = requireElectronApi();
+      const result = await api.files.saveDatabaseAs();
       if (result) {
         setDatabasePath(result);
         // Extract name from path
@@ -49,7 +59,8 @@ export default function CreateDatabasePage() {
 
   const handleSelectDataFiles = async () => {
     try {
-      const results = await window.orbitalDb.files.selectDataFiles();
+      const api = requireElectronApi();
+      const results = await api.files.selectDataFiles();
       if (results && results.length) {
         const newFiles = results.map((filePath) => {
           const fileName = getBaseName(filePath) || 'file';
@@ -121,6 +132,7 @@ export default function CreateDatabasePage() {
     setError(null);
 
     try {
+      const api = requireElectronApi();
       // Step 1: Create profile
       setProgress('Creating database profile...');
       const profileInput: DuckDBProfileInput = {
@@ -133,7 +145,7 @@ export default function CreateDatabasePage() {
 
       // Step 2: Open connection
       setProgress('Opening database connection...');
-      await window.orbitalDb.connection.open(profileId);
+      await api.connection.open(profileId);
 
       try {
         // Step 3: Import each file
@@ -142,13 +154,14 @@ export default function CreateDatabasePage() {
           setProgress(`Importing ${file.fileName} (${i + 1}/${selectedFiles.length})...`);
 
           const sql = generateImportSQL(file);
-          await window.orbitalDb.query.run(profileId, sql);
+          await api.query.run(profileId, sql);
         }
       } finally {
-        await window.orbitalDb.connection.close(profileId);
+        await api.connection.close(profileId);
       }
 
       setProgress('Database created successfully!');
+      setCreating(false);
 
       // Navigate to the new database
       setTimeout(() => {
@@ -161,6 +174,19 @@ export default function CreateDatabasePage() {
       setProgress('');
     }
   };
+
+  if (!electronApi) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="card bg-yellow-50 border border-yellow-200">
+          <h1 className="text-2xl font-bold mb-2">Electron APIs Unavailable</h1>
+          <p className="text-yellow-800">
+            The Create Database wizard requires the Electron runtime. Please run the packaged Orbital DB application or `npm run dev` inside Electron instead of visiting the Vite dev server in a browser.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl">

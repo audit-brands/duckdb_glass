@@ -7,8 +7,20 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
-        external: ['@duckdb/node-api']
-      }
+        input: {
+          main: path.resolve(__dirname, 'src/main/main.ts'),
+          duckdbWorker: path.resolve(__dirname, 'src/main/workers/duckdbWorker.ts'),
+        },
+        output: {
+          entryFileNames: (chunk) => {
+            if (chunk.name === 'duckdbWorker') {
+              return 'workers/[name].js';
+            }
+            return '[name].js';
+          },
+        },
+        external: ['@duckdb/node-api'],
+      },
     },
     resolve: {
       alias: {

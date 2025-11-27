@@ -286,6 +286,28 @@ interface DuckDBProfile {
 2. **Constraints**: Constraint listing may not work for all DuckDB versions (graceful fallback implemented)
 3. **Monaco Editor**: Currently using simple textarea; could be upgraded to Monaco for better SQL editing
 
+## Future Enhancements Roadmap
+
+### Streaming & Virtualized Results
+- [ ] Switch `DataGrid` to a virtualized renderer (e.g., `@tanstack/react-virtual`) so the UI only mounts visible rows/columns.
+- [ ] Abstractions for chunked/streamed query responses from the worker thread.
+- [ ] Loading states and progressive rendering indicators for large datasets.
+
+### Query History & Snippets
+- [ ] Persist the last N queries per profile (local storage or JSON file).
+- [ ] Provide quick re-run/edit controls in the Query page.
+- [ ] Optional saved snippets with friendly names.
+
+### Slow Query Insights & Cancellation UX
+- [ ] Record execution time/row count metadata for each query.
+- [ ] Show warnings/toasts for queries exceeding a threshold (e.g., 5s).
+- [ ] Surface worker-side cancel/timeout events in a shared notification system.
+
+### Documentation, Release Prep & QA
+- [ ] Update README with screenshots/gifs of the new query tooling.
+- [ ] Draft v0.2.0 release notes summarizing security/performance improvements.
+- [ ] Expand manual testing checklist (query cancellation, timeout overrides, virtualization once implemented).
+
 ## Testing Checklist
 
 - [ ] Create a new in-memory profile

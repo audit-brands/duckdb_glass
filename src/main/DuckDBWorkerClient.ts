@@ -52,6 +52,7 @@ export interface DuckDBExecutor {
   getColumns(profileId: string, schemaName: string, tableName: string): Promise<ColumnInfo[]>;
   listConstraints(profileId: string, schemaName: string, tableName: string): Promise<ConstraintInfo[]>;
   exportToCsv(profileId: string, sql: string, filePath: string): Promise<number>;
+  destroy(): Promise<void>;
 }
 
 export class DuckDBWorkerClient implements DuckDBExecutor {
