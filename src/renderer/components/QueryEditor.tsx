@@ -38,8 +38,11 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [snippetsRefreshKey, setSnippetsRefreshKey] = useState(0);
   const [explainMode, setExplainMode] = useState<'off' | 'explain' | 'analyze'>('off');
+  const [elapsedTime, setElapsedTime] = useState(0);
   const cancelRequestedRef = useRef(false);
   const currentRunRef = useRef<Promise<QueryResult> | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const queryStartTimeRef = useRef<number | null>(null);
 
   const handleRunQuery = useCallback(async () => {
     const trimmed = sql.trim();
@@ -52,6 +55,16 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
     setLoading(true);
     setError(null);
     setResult(null);
+
+    // Start tracking query execution time
+    const startTime = Date.now();
+    queryStartTimeRef.current = startTime;
+    setElapsedTime(0);
+
+    // Update elapsed time every 100ms
+    timerRef.current = setInterval(() => {
+      setElapsedTime(Date.now() - startTime);
+    }, 100);
 
     const parsedTimeout = Number(timeoutMs);
     const maxExecutionTimeMs =
@@ -143,7 +156,15 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
       })
       .catch((err) => {
         if (cancelRequestedRef.current) {
-          setError('Query cancelled by user');
+          const errorMsg = 'Query cancelled by user';
+          setError(errorMsg);
+
+          // Show cancellation toast
+          dispatch(addToast({
+            type: 'info',
+            message: 'Query execution cancelled',
+            duration: 3000,
+          }));
 
           // Record cancelled query in history
           if (window.orbitalDb?.queryHistory) {
@@ -153,7 +174,7 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
               executionTimeMs: 0,
               rowCount: 0,
               success: false,
-              error: 'Query cancelled by user',
+              error: errorMsg,
             }).catch(historyErr => {
               console.error('Failed to record query history:', historyErr);
             });
@@ -162,12 +183,28 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
           const errorMessage = (err as Error).message;
           setError(errorMessage);
 
+          // Compute elapsed time from ref (in case timer hasn't updated state yet)
+          const executionTime = queryStartTimeRef.current ? Date.now() - queryStartTimeRef.current : 0;
+
+          // Check if this is a timeout error
+          const isTimeout = errorMessage.toLowerCase().includes('timeout') ||
+                           errorMessage.toLowerCase().includes('interrupted') ||
+                           errorMessage.toLowerCase().includes('cancelled');
+
+          if (isTimeout) {
+            dispatch(addToast({
+              type: 'warning',
+              message: `Query timed out after ${(executionTime / 1000).toFixed(1)}s. Consider optimizing or increasing timeout.`,
+              duration: 6000,
+            }));
+          }
+
           // Record failed query in history
           if (window.orbitalDb?.queryHistory) {
             window.orbitalDb.queryHistory.add(profileId, {
               sql: trimmed,
               timestamp: Date.now(),
-              executionTimeMs: 0,
+              executionTimeMs: executionTime,
               rowCount: 0,
               success: false,
               error: errorMessage,
@@ -181,6 +218,13 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
         if (currentRunRef.current === runPromise) {
           currentRunRef.current = null;
           setLoading(false);
+          queryStartTimeRef.current = null;
+
+          // Clear the timer
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
         }
       });
   }, [sql, timeoutMs, profileId, isReadOnly, explainMode, dispatch]);
@@ -198,6 +242,15 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleRunQuery]); // handleRunQuery is now properly memoized
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
 
   const handleCancelQuery = async () => {
     if (!loading) {
@@ -301,34 +354,64 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
             profileId={profileId}
           />
         </div>
+
+        {/* Progress Indicator */}
+        {loading && (
+          <div className="mt-3 mb-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full"></div>
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                  {explainMode === 'off' ? 'Executing query...' : explainMode === 'explain' ? 'Generating query plan...' : 'Analyzing query execution...'}
+                </span>
+              </div>
+              <span className="text-sm text-blue-700 dark:text-blue-300 font-mono">
+                {(elapsedTime / 1000).toFixed(1)}s
+              </span>
+            </div>
+            <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-1.5 overflow-hidden">
+              <div className="h-full bg-blue-600 dark:bg-blue-400 animate-pulse" style={{ width: '100%' }}></div>
+            </div>
+          </div>
+        )}
+
         <div className="mt-3 flex flex-wrap gap-3 items-center">
           <button onClick={handleRunQuery} disabled={loading} className="btn-primary">
             {loading ? 'Running...' : explainMode === 'off' ? 'Run Query' : explainMode === 'explain' ? 'Explain Query' : 'Explain & Analyze'}
           </button>
-          <button
-            onClick={() => setShowSaveDialog(true)}
-            disabled={!sql.trim()}
-            className="btn-secondary"
-          >
-            Save Query
-          </button>
-          <button
-            onClick={() => {
-              setSql('');
-              setResult(null);
-              setError(null);
-            }}
-            className="btn-secondary"
-          >
-            Clear
-          </button>
-          <button
-            onClick={handleCancelQuery}
-            disabled={!loading}
-            className="btn-secondary"
-          >
-            Cancel Query
-          </button>
+
+          {/* Prominent Cancel Button when query is running */}
+          {loading && (
+            <button
+              onClick={handleCancelQuery}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded transition-colors shadow-lg animate-pulse"
+              title="Cancel the running query"
+            >
+              ⏹ Cancel Query
+            </button>
+          )}
+
+          {!loading && (
+            <>
+              <button
+                onClick={() => setShowSaveDialog(true)}
+                disabled={!sql.trim()}
+                className="btn-secondary"
+              >
+                Save Query
+              </button>
+              <button
+                onClick={() => {
+                  setSql('');
+                  setResult(null);
+                  setError(null);
+                }}
+                className="btn-secondary"
+              >
+                Clear
+              </button>
+            </>
+          )}
 
           {/* EXPLAIN Mode Selector */}
           <div className="flex items-center space-x-1 border border-gray-300 dark:border-gray-600 rounded overflow-hidden">
