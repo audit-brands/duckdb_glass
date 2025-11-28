@@ -15,10 +15,22 @@ export default function ProfilesPage() {
   const { list: profiles, loading } = useAppSelector((state) => state.profiles);
   const [showForm, setShowForm] = useState(false);
   const [editingProfile, setEditingProfile] = useState<DuckDBProfile | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     dispatch(loadProfiles());
   }, [dispatch]);
+
+  // Filter profiles based on search query
+  const filteredProfiles = profiles.filter(profile => {
+    if (!searchQuery.trim()) return true;
+
+    const query = searchQuery.toLowerCase();
+    const nameMatch = profile.name.toLowerCase().includes(query);
+    const pathMatch = profile.dbPath.toLowerCase().includes(query);
+
+    return nameMatch || pathMatch;
+  });
 
   const handleCreate = async (input: DuckDBProfileInput) => {
     try {
@@ -102,6 +114,57 @@ export default function ProfilesPage() {
         </div>
       </div>
 
+      {/* Search bar - only show when there are profiles */}
+      {profiles.length > 0 && (
+        <div className="mb-6">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                className="h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search profiles by name or path..."
+              className="input-field w-full pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="Clear search"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Found {filteredProfiles.length} of {profiles.length} profile{profiles.length !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
+      )}
+
       {showForm && (
         <div className="card mb-6">
           <h2 className="text-xl font-semibold mb-4">
@@ -128,8 +191,22 @@ export default function ProfilesPage() {
             Create Your First Profile
           </button>
         </div>
+      ) : filteredProfiles.length === 0 ? (
+        <div className="card text-center py-12">
+          <div className="text-gray-400 text-5xl mb-4">🔍</div>
+          <p className="text-gray-600 dark:text-gray-400 mb-2">No profiles match your search</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
+            Try a different search term or clear the filter
+          </p>
+          <button
+            onClick={() => setSearchQuery('')}
+            className="btn-secondary"
+          >
+            Clear Search
+          </button>
+        </div>
       ) : (
-        <ProfileList profiles={profiles} onEdit={handleEdit} onDelete={handleDelete} />
+        <ProfileList profiles={filteredProfiles} onEdit={handleEdit} onDelete={handleDelete} />
       )}
     </div>
   );
