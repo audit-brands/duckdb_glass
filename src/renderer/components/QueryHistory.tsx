@@ -25,7 +25,7 @@ export default function QueryHistory({ profileId, onSelectQuery }: QueryHistoryP
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'failed'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'DQL' | 'DML' | 'DDL' | 'TCL'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'DQL' | 'DML' | 'DDL' | 'TCL' | 'DuckDB'>('all');
 
   const loadHistory = useCallback(async () => {
     try {

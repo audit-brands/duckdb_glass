@@ -231,7 +231,13 @@ export class DuckDBService {
         readerPromise = Promise.race([basePromise, timeoutPromise]);
       }
 
-      const reader = await readerPromise;
+      let reader;
+      try {
+        reader = await readerPromise;
+      } catch (error) {
+        // Enhance error message with helpful context
+        throw enhanceQueryError(error, sql);
+      }
       if (timer) {
         clearTimeout(timer);
       }
@@ -371,7 +377,10 @@ export class DuckDBService {
         const rows = reader.getRows();
 
         // Extract suggestion strings from rows
-        return rows.map(row => String(row[0]));
+        const suggestions = rows.map(row => String(row[0]));
+
+        // Post-process suggestions to fix known DuckDB autocomplete quirks
+        return filterAndCorrectSuggestions(suggestions, queryString);
       } catch (error) {
         // If autocomplete fails, return empty array (graceful degradation)
         return [];
@@ -422,6 +431,17 @@ function trimTrailingSemicolon(sql: string): string {
 function detectStatementType(sql: string): StatementType {
   const trimmed = sql.trim().toUpperCase();
   const firstWord = trimmed.split(/\s+/)[0];
+
+  // DuckDB-specific modern SQL features
+  // FROM-first syntax: "FROM table SELECT *" instead of "SELECT * FROM table"
+  if (firstWord === 'FROM') {
+    return 'DuckDB';
+  }
+
+  // PIVOT/UNPIVOT operations (DuckDB extension)
+  if (['PIVOT', 'UNPIVOT'].includes(firstWord)) {
+    return 'DuckDB';
+  }
 
   // DQL - Data Query Language (including utility commands that query metadata)
   if (firstWord === 'SELECT' || firstWord === 'WITH' || trimmed.startsWith('(SELECT')) {
@@ -498,4 +518,92 @@ function maybeWrapQueryWithLimit(
   const limitWithSentinel = rowLimit + 1;
   const wrappedSql = `SELECT * FROM (${withoutSemicolon}) AS orbital_limited_result LIMIT ${limitWithSentinel}`;
   return { wrappedSql, limitApplied: true };
+}
+
+/**
+ * Enhances DuckDB error messages with user-friendly context and suggestions.
+ * Detects common SQL mistakes and provides helpful guidance.
+ */
+function enhanceQueryError(error: unknown, sql: string): Error {
+  const originalMessage = (error as Error).message;
+
+  // Common SQL keyword typos and corrections
+  const commonMistakes = [
+    { pattern: /\bSHOW\s+TABLE\s*$/i, suggestion: 'Did you mean "SHOW TABLES"? The correct command is "SHOW TABLES" (plural).' },
+    { pattern: /\bSELECT\s+.*\s+FORM\s+/i, suggestion: 'Did you mean "FROM" instead of "FORM"?' },
+    { pattern: /\bWHERE\s+.*\s+EQUAL\s+/i, suggestion: 'Did you mean "=" instead of "EQUAL"?' },
+    { pattern: /\bORDER\s+(?!BY)/i, suggestion: 'Did you mean "ORDER BY"?' },
+    { pattern: /\bGROUP\s+(?!BY)/i, suggestion: 'Did you mean "GROUP BY"?' },
+  ];
+
+  // Check for common mistakes in the SQL
+  for (const mistake of commonMistakes) {
+    if (mistake.pattern.test(sql)) {
+      return new Error(`${originalMessage}\n\n${mistake.suggestion}`);
+    }
+  }
+
+  // If it's a parser error at end of input, provide more context
+  if (originalMessage.includes('syntax error at end of input')) {
+    return new Error(
+      `${originalMessage}\n\nYour query appears to be incomplete or has a syntax error. ` +
+      `Check for missing keywords, parentheses, or semicolons.`
+    );
+  }
+
+  // If it's a generic parser error, suggest checking syntax
+  if (originalMessage.includes('Parser Error')) {
+    return new Error(
+      `${originalMessage}\n\nCheck your SQL syntax. Common issues include:\n` +
+      `- Misspelled keywords (e.g., "FORM" instead of "FROM")\n` +
+      `- Missing or mismatched quotes\n` +
+      `- Missing commas or parentheses`
+    );
+  }
+
+  // Return original error if we can't enhance it
+  return error as Error;
+}
+
+/**
+ * Filters and corrects autocomplete suggestions from DuckDB to fix known quirks.
+ *
+ * Known issues:
+ * - DuckDB suggests "table" instead of "tables" for "SHOW TA..." context
+ * - Need to filter out invalid suggestions for certain contexts
+ *
+ * @param suggestions - Raw suggestions from DuckDB's sql_auto_complete
+ * @param queryString - The partial SQL query being completed
+ * @returns Filtered and corrected suggestions
+ */
+function filterAndCorrectSuggestions(suggestions: string[], queryString: string): string[] {
+  const normalizedQuery = queryString.trim().toUpperCase();
+
+  // Special case: SHOW command - only suggest valid SHOW targets
+  if (normalizedQuery.startsWith('SHOW')) {
+    // Filter out invalid suggestions like "table" (singular)
+    const filtered = suggestions.filter(suggestion => {
+      const upper = suggestion.toUpperCase();
+
+      // Remove "TABLE" (singular) from suggestions for SHOW command
+      if (upper === 'TABLE') {
+        return false;
+      }
+
+      return true;
+    });
+
+    // If user typed "SHOW TA", ensure "TABLES" is in the list
+    if (normalizedQuery.match(/^SHOW\s+TA/)) {
+      if (!filtered.some(s => s.toUpperCase() === 'TABLES')) {
+        filtered.unshift('TABLES');
+      }
+      // Remove any "table" (case-insensitive) suggestions
+      return filtered.filter(s => s.toUpperCase() !== 'TABLE');
+    }
+
+    return filtered;
+  }
+
+  return suggestions;
 }
