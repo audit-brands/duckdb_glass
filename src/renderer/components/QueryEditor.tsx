@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../state/store';
 import type { QueryResult, StatementType } from '@shared/types';
-import DataGrid from './DataGrid';
+import VirtualizedDataGrid from './VirtualizedDataGrid';
 import QueryHistory from './QueryHistory';
 import SavedSnippets from './SavedSnippets';
 import SaveSnippetDialog from './SaveSnippetDialog';
@@ -373,7 +373,7 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
                   </span>
                 )}
               </div>
-              <DataGrid result={result} />
+              <VirtualizedDataGrid result={result} />
             </>
           )}
 
@@ -455,7 +455,7 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
                             </span>
                           )}
                         </div>
-                      <DataGrid result={result} />
+                      <VirtualizedDataGrid result={result} />
                     </>
                   )}
                 </div>

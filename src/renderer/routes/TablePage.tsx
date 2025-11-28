@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { QueryResult } from '@shared/types';
-import DataGrid from '../components/DataGrid';
+import VirtualizedDataGrid from '../components/VirtualizedDataGrid';
 import { useAppDispatch } from '../state/hooks';
 import { acquireConnection, releaseConnection } from '../state/slices/profilesSlice';
 
@@ -76,7 +76,7 @@ export default function TablePage() {
               </span>
             )}
           </div>
-          <DataGrid result={data} />
+          <VirtualizedDataGrid result={data} />
         </div>
       )}
     </div>
