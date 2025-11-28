@@ -54,6 +54,10 @@ contextBridge.exposeInMainWorld('orbitalDb', {
     ): Promise<QueryResult> => ipcRenderer.invoke(IPC_CHANNELS.QUERY_RUN, profileId, sql, options),
     exportCsv: (profileId: string, sql: string, filePath: string): Promise<number> =>
       ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_CSV, profileId, sql, filePath),
+    exportJson: (profileId: string, sql: string, filePath: string, format: 'array' | 'newline'): Promise<number> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_JSON, profileId, sql, filePath, format),
+    exportParquet: (profileId: string, sql: string, filePath: string): Promise<number> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_PARQUET, profileId, sql, filePath),
     cancel: (profileId: string): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.QUERY_CANCEL, profileId),
     autocomplete: (profileId: string, queryString: string): Promise<string[]> =>
@@ -109,5 +113,9 @@ contextBridge.exposeInMainWorld('orbitalDb', {
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SAVE_DATABASE),
     saveCsvAs: (): Promise<string | null> =>
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SAVE_CSV),
+    saveJsonAs: (): Promise<string | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SAVE_JSON),
+    saveParquetAs: (): Promise<string | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SAVE_PARQUET),
   },
 });

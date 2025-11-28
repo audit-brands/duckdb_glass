@@ -183,6 +183,30 @@ export function registerIpcHandlers(
     }
   );
 
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_EXPORT_JSON,
+    async (_event, profileId: string, sql: string, filePath: string, format: 'array' | 'newline') => {
+      try {
+        return await duckdbService.exportToJson(profileId, sql, filePath, format);
+      } catch (error) {
+        console.error('Failed to export JSON:', error);
+        throw error;
+      }
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_EXPORT_PARQUET,
+    async (_event, profileId: string, sql: string, filePath: string) => {
+      try {
+        return await duckdbService.exportToParquet(profileId, sql, filePath);
+      } catch (error) {
+        console.error('Failed to export Parquet:', error);
+        throw error;
+      }
+    }
+  );
+
   // File dialog handlers
   ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_DATABASE, async () => {
     try {
@@ -274,6 +298,53 @@ export function registerIpcHandlers(
       return result.filePath;
     } catch (error) {
       console.error('Failed to open save CSV dialog:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DIALOG_SAVE_JSON, async () => {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Export Query Results to JSON',
+        defaultPath: 'query_results.json',
+        filters: [
+          { name: 'JSON Files', extensions: ['json'] },
+          { name: 'NDJSON Files', extensions: ['ndjson', 'jsonl'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+      });
+
+      if (result.canceled || !result.filePath) {
+        return null;
+      }
+
+      return result.filePath;
+    } catch (error) {
+      console.error('Failed to open save JSON dialog:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DIALOG_SAVE_PARQUET, async () => {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Export Query Results to Parquet',
+        defaultPath: 'query_results.parquet',
+        filters: [
+          { name: 'Parquet Files', extensions: ['parquet'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+      });
+
+      if (result.canceled || !result.filePath) {
+        return null;
+      }
+
+      return result.filePath;
+    } catch (error) {
+      console.error('Failed to open save Parquet dialog:', error);
       throw error;
     }
   });

@@ -45,6 +45,8 @@ declare global {
           options?: QueryOptions
         ): Promise<QueryResult>;
         exportCsv(profileId: string, sql: string, filePath: string): Promise<number>;
+        exportJson(profileId: string, sql: string, filePath: string, format: 'array' | 'newline'): Promise<number>;
+        exportParquet(profileId: string, sql: string, filePath: string): Promise<number>;
         cancel(profileId: string): Promise<void>;
         autocomplete(profileId: string, queryString: string): Promise<string[]>;
       };
@@ -81,6 +83,8 @@ declare global {
         selectDatabase(): Promise<string | null>;
         saveDatabaseAs(): Promise<string | null>;
         saveCsvAs(): Promise<string | null>;
+        saveJsonAs(): Promise<string | null>;
+        saveParquetAs(): Promise<string | null>;
       };
     };
   }

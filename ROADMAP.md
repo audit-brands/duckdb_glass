@@ -442,21 +442,28 @@ interface DuckDBProfile {
 
 **Goal**: Make it easy to install and use DuckDB extensions.
 
+**Backend Status**: ✅ Already implemented
+- Extensions stored in profile.extensions array (DuckDBProfile type)
+- Auto-loaded on connection open (DuckDBService.ts:72-76)
+- Users can query extension status with `SELECT * FROM duckdb_extensions()`
+
 **Features**:
 - UI for browsing available extensions
 - One-click extension installation
 - Extension status indicators (installed/loaded)
-- Auto-load extensions on connection
+- Auto-load extensions on connection ✅ (already works)
 - Extension documentation links
 
 **Tasks**:
-- [ ] Create Extensions page in UI
-- [ ] List available DuckDB extensions with descriptions
-- [ ] Add "Install" button for each extension
-- [ ] Implement `INSTALL` and `LOAD` SQL execution
-- [ ] Store loaded extensions in profile settings
-- [ ] Show extension status in Settings page
-- [ ] Add extension usage examples
+- [x] Store loaded extensions in profile settings (backend complete)
+- [x] Auto-load extensions on connection open (backend complete)
+- [ ] Create Extensions management UI page
+- [ ] List available DuckDB extensions via `duckdb_extensions()` query
+- [ ] Add "Install" button for each extension (runs `INSTALL {ext}`)
+- [ ] Add "Load" toggle for each extension (adds/removes from profile.extensions)
+- [ ] Show extension status indicators (installed/loaded/available)
+- [ ] Add extension usage examples and documentation links
+- [ ] Add simple text input in ProfileForm for manually adding extensions
 
 ---
 

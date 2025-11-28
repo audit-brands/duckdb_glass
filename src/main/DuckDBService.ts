@@ -414,6 +414,63 @@ export class DuckDBService {
       return rowCount;
     });
   }
+
+  /**
+   * Export query results to JSON using DuckDB's native COPY TO command.
+   * This is memory-efficient and can handle millions of rows without loading into memory.
+   *
+   * @param profileId - The profile ID for the database connection
+   * @param sql - The SQL query to execute
+   * @param filePath - The absolute path where the JSON file should be written
+   * @param format - 'array' for JSON array or 'newline' for newline-delimited JSON (NDJSON)
+   * @returns The number of rows exported
+   */
+  async exportToJson(profileId: string, sql: string, filePath: string, format: 'array' | 'newline' = 'array'): Promise<number> {
+    return this.withProfileLock(profileId, async () => {
+      const connection = this.getConnectionOrThrow(profileId);
+
+      const escapedPath = filePath.replace(/'/g, "''");
+      // DuckDB supports 'array' format (standard JSON array) and 'newline' format (NDJSON)
+      const formatOption = format === 'newline' ? 'nd' : 'array';
+      const copySQL = `COPY (${sql}) TO '${escapedPath}' (FORMAT JSON, ARRAY ${formatOption === 'array'});`;
+
+      await connection.run(copySQL);
+
+      const countSQL = `SELECT COUNT(*) FROM (${sql})`;
+      const countReader = await connection.runAndReadAll(countSQL);
+      const rows = countReader.getRows();
+      const rowCount = Number(rows[0][0]);
+
+      return rowCount;
+    });
+  }
+
+  /**
+   * Export query results to Parquet using DuckDB's native COPY TO command.
+   * This is memory-efficient and provides excellent compression for analytical workloads.
+   *
+   * @param profileId - The profile ID for the database connection
+   * @param sql - The SQL query to execute
+   * @param filePath - The absolute path where the Parquet file should be written
+   * @returns The number of rows exported
+   */
+  async exportToParquet(profileId: string, sql: string, filePath: string): Promise<number> {
+    return this.withProfileLock(profileId, async () => {
+      const connection = this.getConnectionOrThrow(profileId);
+
+      const escapedPath = filePath.replace(/'/g, "''");
+      const copySQL = `COPY (${sql}) TO '${escapedPath}' (FORMAT PARQUET);`;
+
+      await connection.run(copySQL);
+
+      const countSQL = `SELECT COUNT(*) FROM (${sql})`;
+      const countReader = await connection.runAndReadAll(countSQL);
+      const rows = countReader.getRows();
+      const rowCount = Number(rows[0][0]);
+
+      return rowCount;
+    });
+  }
 }
 
 /**

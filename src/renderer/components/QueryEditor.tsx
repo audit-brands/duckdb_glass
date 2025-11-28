@@ -10,6 +10,7 @@ import SavedSnippets from './SavedSnippets';
 import SaveSnippetDialog from './SaveSnippetDialog';
 import SqlEditor from './SqlEditor';
 import ExplainPlan from './ExplainPlan';
+import { ExportDialog, type ExportFormat, type ExportOptions } from './ExportDialog';
 import { getBaseName } from '../utils/path';
 import { DEFAULT_RESULT_LIMIT, DEFAULT_QUERY_TIMEOUT_MS } from '@shared/constants';
 import { useAppDispatch } from '../state/hooks';
@@ -36,6 +37,7 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState<TabView>('results');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [snippetsRefreshKey, setSnippetsRefreshKey] = useState(0);
   const [explainMode, setExplainMode] = useState<'off' | 'explain' | 'analyze'>('off');
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -274,23 +276,39 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
     }
   };
 
-  const handleExportCSV = async () => {
+  const handleExport = async (format: ExportFormat, _options: ExportOptions) => {
     if (!result || !sql) return;
 
     try {
-      // Show save dialog
-      const filePath = await window.orbitalDb.files.saveCsvAs();
-      if (!filePath) return; // User cancelled
+      let filePath: string | null = null;
+      let rowCount = 0;
 
-      // Use DuckDB's native COPY TO command for memory-efficient export
-      // This streams directly to disk without loading all data into memory
-      const rowCount = await window.orbitalDb.query.exportCsv(profileId, sql, filePath);
+      // Show appropriate save dialog based on format
+      if (format === 'csv') {
+        filePath = await window.orbitalDb.files.saveCsvAs();
+        if (!filePath) return; // User cancelled
+
+        // TODO: Use options.delimiter and options.header when CSV export is enhanced
+        rowCount = await window.orbitalDb.query.exportCsv(profileId, sql, filePath);
+      } else if (format === 'json') {
+        filePath = await window.orbitalDb.files.saveJsonAs();
+        if (!filePath) return; // User cancelled
+
+        const jsonFormat = _options.jsonFormat || 'array';
+        rowCount = await window.orbitalDb.query.exportJson(profileId, sql, filePath, jsonFormat);
+      } else if (format === 'parquet') {
+        filePath = await window.orbitalDb.files.saveParquetAs();
+        if (!filePath) return; // User cancelled
+
+        rowCount = await window.orbitalDb.query.exportParquet(profileId, sql, filePath);
+      }
 
       // Show success toast
-      const fileName = getBaseName(filePath) || 'file';
+      const fileName = filePath ? (getBaseName(filePath) || 'file') : 'file';
+      const formatLabel = format.toUpperCase();
       dispatch(addToast({
         type: 'success',
-        message: `Successfully exported ${rowCount.toLocaleString()} rows to ${fileName}`,
+        message: `Successfully exported ${rowCount.toLocaleString()} rows to ${fileName} (${formatLabel})`,
         duration: 5000,
       }));
     } catch (err) {
@@ -529,11 +547,11 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
               <div className="text-sm text-gray-500">{result.executionTimeMs.toFixed(2)}ms</div>
               {result.rowCount > 0 && (
                 <button
-                  onClick={handleExportCSV}
+                  onClick={() => setShowExportDialog(true)}
                   className="btn-secondary text-sm"
-                  title="Export results to CSV"
+                  title="Export results (CSV, JSON, Parquet)"
                 >
-                  📥 Export CSV
+                  📥 Export
                 </button>
               )}
             </div>
@@ -667,6 +685,16 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
           sql={sql.trim()}
           onSave={handleSaveSnippet}
           onCancel={() => setShowSaveDialog(false)}
+        />
+      )}
+
+      {/* Export Dialog */}
+      {showExportDialog && result && (
+        <ExportDialog
+          isOpen={showExportDialog}
+          onClose={() => setShowExportDialog(false)}
+          onExport={handleExport}
+          rowCount={result.rowCount}
         />
       )}
     </div>

@@ -20,6 +20,8 @@ type WorkerMethod =
   | 'getColumns'
   | 'listConstraints'
   | 'exportToCsv'
+  | 'exportToJson'
+  | 'exportToParquet'
   | 'getAutocompleteSuggestions';
 
 interface WorkerRequest {
@@ -53,6 +55,8 @@ export interface DuckDBExecutor {
   getColumns(profileId: string, schemaName: string, tableName: string): Promise<ColumnInfo[]>;
   listConstraints(profileId: string, schemaName: string, tableName: string): Promise<ConstraintInfo[]>;
   exportToCsv(profileId: string, sql: string, filePath: string): Promise<number>;
+  exportToJson(profileId: string, sql: string, filePath: string, format: 'array' | 'newline'): Promise<number>;
+  exportToParquet(profileId: string, sql: string, filePath: string): Promise<number>;
   getAutocompleteSuggestions(profileId: string, queryString: string): Promise<string[]>;
   destroy(): Promise<void>;
 }
@@ -149,6 +153,14 @@ export class DuckDBWorkerClient implements DuckDBExecutor {
 
   exportToCsv(profileId: string, sql: string, filePath: string): Promise<number> {
     return this.call<number>('exportToCsv', profileId, sql, filePath);
+  }
+
+  exportToJson(profileId: string, sql: string, filePath: string, format: 'array' | 'newline'): Promise<number> {
+    return this.call<number>('exportToJson', profileId, sql, filePath, format);
+  }
+
+  exportToParquet(profileId: string, sql: string, filePath: string): Promise<number> {
+    return this.call<number>('exportToParquet', profileId, sql, filePath);
   }
 
   getAutocompleteSuggestions(profileId: string, queryString: string): Promise<string[]> {

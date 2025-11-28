@@ -22,6 +22,8 @@ export const IPC_CHANNELS = {
   // Query execution
   QUERY_RUN: 'orbitalDb:query:run',
   QUERY_EXPORT_CSV: 'orbitalDb:query:exportCsv',
+  QUERY_EXPORT_JSON: 'orbitalDb:query:exportJson',
+  QUERY_EXPORT_PARQUET: 'orbitalDb:query:exportParquet',
   QUERY_CANCEL: 'orbitalDb:query:cancel',
   QUERY_AUTOCOMPLETE: 'orbitalDb:query:autocomplete',
 
@@ -41,6 +43,8 @@ export const IPC_CHANNELS = {
   DIALOG_SAVE_DATABASE: 'orbitalDb:dialog:saveDatabase',
   DIALOG_OPEN_DATA_FILE: 'orbitalDb:dialog:openDataFile',
   DIALOG_SAVE_CSV: 'orbitalDb:dialog:saveCsv',
+  DIALOG_SAVE_JSON: 'orbitalDb:dialog:saveJson',
+  DIALOG_SAVE_PARQUET: 'orbitalDb:dialog:saveParquet',
 
   // App metadata
   APP_GET_VERSION: 'orbitalDb:app:getVersion',
