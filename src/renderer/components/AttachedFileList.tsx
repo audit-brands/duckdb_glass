@@ -1,7 +1,7 @@
 // Component for managing attached files in a profile
 
 import { useState } from 'react';
-import type { AttachedFile } from '@shared/types';
+import type { AttachedFile, CsvOptions } from '@shared/types';
 
 interface AttachedFileListProps {
   files: AttachedFile[];
@@ -14,6 +14,8 @@ export default function AttachedFileList({ files, onChange, disabled }: Attached
   const [newAlias, setNewAlias] = useState('');
   const [newPath, setNewPath] = useState('');
   const [newType, setNewType] = useState<AttachedFile['type']>('auto');
+  const [showCsvOptions, setShowCsvOptions] = useState(false);
+  const [csvOptions, setCsvOptions] = useState<CsvOptions>({});
   const [error, setError] = useState<string | null>(null);
 
   const handleSelectFile = async () => {
@@ -35,10 +37,19 @@ export default function AttachedFileList({ files, onChange, disabled }: Attached
 
         // Auto-detect file type
         const ext = fileName.split('.').pop()?.toLowerCase();
-        if (ext === 'csv') setNewType('csv');
-        else if (ext === 'parquet') setNewType('parquet');
-        else if (ext === 'json' || ext === 'jsonl') setNewType('json');
-        else setNewType('auto');
+        if (ext === 'csv' || ext === 'txt') {
+          setNewType('csv');
+          setShowCsvOptions(true); // Show CSV options for .csv and .txt files
+        } else if (ext === 'parquet') {
+          setNewType('parquet');
+          setShowCsvOptions(false);
+        } else if (ext === 'json' || ext === 'jsonl') {
+          setNewType('json');
+          setShowCsvOptions(false);
+        } else {
+          setNewType('auto');
+          setShowCsvOptions(false);
+        }
 
         setError(null);
       }
@@ -77,6 +88,8 @@ export default function AttachedFileList({ files, onChange, disabled }: Attached
       alias: newAlias.trim(),
       path: newPath.trim(),
       type: newType,
+      // Only include csvOptions if showCsvOptions is true and options are set
+      csvOptions: showCsvOptions && Object.keys(csvOptions).length > 0 ? csvOptions : undefined,
     };
 
     onChange([...files, newFile]);
@@ -85,6 +98,8 @@ export default function AttachedFileList({ files, onChange, disabled }: Attached
     setNewAlias('');
     setNewPath('');
     setNewType('auto');
+    setShowCsvOptions(false);
+    setCsvOptions({});
     setIsAdding(false);
   };
 
@@ -147,6 +162,11 @@ export default function AttachedFileList({ files, onChange, disabled }: Attached
                     <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
                       {file.type === 'auto' ? 'auto-detect' : file.type.toUpperCase()}
                     </span>
+                    {file.csvOptions?.delimiter && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300" title="Custom delimiter">
+                        delim: {file.csvOptions.delimiter === '\t' ? '\\t' : file.csvOptions.delimiter}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 truncate mt-1" title={file.path}>
                     {file.path}
@@ -214,15 +234,105 @@ export default function AttachedFileList({ files, onChange, disabled }: Attached
             <label className="block text-xs font-medium mb-1">File Type</label>
             <select
               value={newType}
-              onChange={(e) => setNewType(e.target.value as AttachedFile['type'])}
+              onChange={(e) => {
+                const type = e.target.value as AttachedFile['type'];
+                setNewType(type);
+                // Show CSV options only for CSV type
+                setShowCsvOptions(type === 'csv');
+              }}
               className="input-field w-full text-sm"
             >
               <option value="auto">Auto-detect</option>
-              <option value="csv">CSV</option>
+              <option value="csv">CSV / Text</option>
               <option value="parquet">Parquet</option>
               <option value="json">JSON/JSONL</option>
             </select>
           </div>
+
+          {/* CSV Options */}
+          {showCsvOptions && (
+            <div className="p-3 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 space-y-3">
+              <div className="flex items-center justify-between">
+                <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  CSV Options
+                </h5>
+                <button
+                  type="button"
+                  onClick={() => setCsvOptions({})}
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  title="Reset to auto-detect"
+                >
+                  Reset
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Delimiter</label>
+                <select
+                  value={csvOptions.delimiter || ''}
+                  onChange={(e) => setCsvOptions({ ...csvOptions, delimiter: e.target.value || undefined })}
+                  className="input-field w-full text-xs"
+                >
+                  <option value="">Auto-detect</option>
+                  <option value=",">Comma (,)</option>
+                  <option value=";">Semicolon (;) - 1BRC format</option>
+                  <option value="\t">Tab (\t)</option>
+                  <option value="|">Pipe (|)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={csvOptions.header !== false}
+                    onChange={(e) => setCsvOptions({ ...csvOptions, header: e.target.checked || undefined })}
+                    className="form-checkbox"
+                  />
+                  <span className="text-xs">First row contains column names</span>
+                </label>
+              </div>
+
+              <details className="text-xs">
+                <summary className="cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                  Advanced Options
+                </summary>
+                <div className="mt-2 space-y-2 pl-2">
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Encoding</label>
+                    <input
+                      type="text"
+                      value={csvOptions.encoding || ''}
+                      onChange={(e) => setCsvOptions({ ...csvOptions, encoding: e.target.value || undefined })}
+                      placeholder="UTF-8 (default)"
+                      className="input-field w-full text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">NULL String</label>
+                    <input
+                      type="text"
+                      value={csvOptions.nullstr || ''}
+                      onChange={(e) => setCsvOptions({ ...csvOptions, nullstr: e.target.value || undefined })}
+                      placeholder="Empty values"
+                      className="input-field w-full text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Skip Lines</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={csvOptions.skip || ''}
+                      onChange={(e) => setCsvOptions({ ...csvOptions, skip: e.target.value ? parseInt(e.target.value) : undefined })}
+                      placeholder="0"
+                      className="input-field w-full text-xs"
+                    />
+                  </div>
+                </div>
+              </details>
+            </div>
+          )}
 
           {error && (
             <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">

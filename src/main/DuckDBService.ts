@@ -144,7 +144,7 @@ export class DuckDBService {
 
     switch (file.type) {
       case 'csv':
-        readFunction = `read_csv('${escapedPath}', AUTO_DETECT=TRUE)`;
+        readFunction = this.buildCsvReadFunction(escapedPath, file.csvOptions);
         break;
       case 'parquet':
         readFunction = `read_parquet('${escapedPath}')`;
@@ -155,15 +155,15 @@ export class DuckDBService {
       case 'auto': {
         // Try to detect based on file extension
         const ext = file.path.toLowerCase().split('.').pop();
-        if (ext === 'csv') {
-          readFunction = `read_csv('${escapedPath}', AUTO_DETECT=TRUE)`;
+        if (ext === 'csv' || ext === 'txt') {
+          readFunction = this.buildCsvReadFunction(escapedPath, file.csvOptions);
         } else if (ext === 'parquet') {
           readFunction = `read_parquet('${escapedPath}')`;
         } else if (ext === 'json' || ext === 'jsonl' || ext === 'ndjson') {
           readFunction = `read_json('${escapedPath}', AUTO_DETECT=TRUE)`;
         } else {
           // Default to CSV for unknown types
-          readFunction = `read_csv('${escapedPath}', AUTO_DETECT=TRUE)`;
+          readFunction = this.buildCsvReadFunction(escapedPath, file.csvOptions);
         }
         break;
       }
@@ -179,6 +179,41 @@ export class DuckDBService {
         `Failed to attach file "${file.alias}": ${(error as Error).message}`
       );
     }
+  }
+
+  /**
+   * Builds a read_csv function call with the specified CSV options.
+   * This allows customization of delimiter, header detection, encoding, etc.
+   */
+  private buildCsvReadFunction(escapedPath: string, options?: import('../shared/types').CsvOptions): string {
+    const params: string[] = [`'${escapedPath}'`];
+
+    if (options?.delimiter) {
+      params.push(`delim='${options.delimiter.replace(/'/g, "''")}'`);
+    }
+
+    if (options?.header !== undefined) {
+      params.push(`header=${options.header ? 'TRUE' : 'FALSE'}`);
+    }
+
+    if (options?.encoding) {
+      params.push(`encoding='${options.encoding.replace(/'/g, "''")}'`);
+    }
+
+    if (options?.nullstr) {
+      params.push(`nullstr='${options.nullstr.replace(/'/g, "''")}'`);
+    }
+
+    if (options?.skip) {
+      params.push(`skip=${options.skip}`);
+    }
+
+    // If no custom options provided, use AUTO_DETECT
+    if (!options || Object.keys(options).length === 0) {
+      params.push('AUTO_DETECT=TRUE');
+    }
+
+    return `read_csv(${params.join(', ')})`;
   }
 
   async interruptQuery(profileId: string): Promise<void> {

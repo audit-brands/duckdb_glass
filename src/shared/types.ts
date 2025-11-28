@@ -1,10 +1,19 @@
 // Shared TypeScript types used across main, preload, and renderer processes
 
+export interface CsvOptions {
+  delimiter?: string; // Default: ',' - can be ';', '\t', '|', etc.
+  header?: boolean; // Default: true - first row contains column names
+  encoding?: string; // Default: 'UTF-8'
+  nullstr?: string; // String to interpret as NULL
+  skip?: number; // Number of lines to skip at start of file
+}
+
 export interface AttachedFile {
   id: string;
   alias: string; // Table name used in SQL queries (e.g., "sales_data")
   path: string; // Absolute file path or URL
   type: 'parquet' | 'csv' | 'json' | 'auto'; // File format, 'auto' for auto-detection
+  csvOptions?: CsvOptions; // CSV-specific options (only used when type is 'csv' or 'auto')
 }
 
 export interface QueryHistoryEntry {
