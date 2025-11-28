@@ -102,7 +102,20 @@ export default function QueryHistory({ profileId, onSelectQuery }: QueryHistoryP
       case 'DML': return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
       case 'DDL': return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300';
       case 'TCL': return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
+      case 'DuckDB': return 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300';
       default: return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+    }
+  };
+
+  const getPerformanceTier = (executionTimeMs: number) => {
+    if (executionTimeMs < 100) {
+      return { label: 'Fast', icon: '⚡', color: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' };
+    } else if (executionTimeMs < 1000) {
+      return { label: 'Good', icon: '✓', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' };
+    } else if (executionTimeMs < 5000) {
+      return { label: 'Moderate', icon: '○', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' };
+    } else {
+      return { label: 'Slow', icon: '⚠', color: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' };
     }
   };
 
@@ -248,6 +261,11 @@ export default function QueryHistory({ profileId, onSelectQuery }: QueryHistoryP
                   {entry.statementType && (
                     <span className={`text-xs px-2 py-0.5 rounded font-medium ${getStatementTypeColor(entry.statementType)}`}>
                       {entry.statementType}
+                    </span>
+                  )}
+                  {entry.success && entry.executionTimeMs !== undefined && (
+                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${getPerformanceTier(entry.executionTimeMs).color}`}>
+                      {getPerformanceTier(entry.executionTimeMs).icon} {getPerformanceTier(entry.executionTimeMs).label}
                     </span>
                   )}
                   {!entry.success && (
