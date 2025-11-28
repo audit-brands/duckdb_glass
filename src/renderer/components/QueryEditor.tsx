@@ -1,6 +1,6 @@
 // Query Editor component for running custom SQL
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../state/store';
 import type { QueryResult, StatementType } from '@shared/types';
@@ -36,21 +36,7 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
   const cancelRequestedRef = useRef(false);
   const currentRunRef = useRef<Promise<QueryResult> | null>(null);
 
-  // Global keyboard shortcut handler
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Cmd/Ctrl+Enter to run query
-      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-        event.preventDefault();
-        handleRunQuery();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sql, loading]); // Re-register when sql or loading changes
-
-  const handleRunQuery = async () => {
+  const handleRunQuery = useCallback(async () => {
     const trimmed = sql.trim();
     if (!trimmed) {
       setError('Please enter a SQL query');
@@ -170,7 +156,21 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
           setLoading(false);
         }
       });
-  };
+  }, [sql, timeoutMs, profileId, isReadOnly, setLoading, setError, setResult, setHistoryRefreshKey, setActiveTab]);
+
+  // Global keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Cmd/Ctrl+Enter to run query
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault();
+        handleRunQuery();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleRunQuery]); // handleRunQuery is now properly memoized
 
   const handleCancelQuery = async () => {
     if (!loading) {

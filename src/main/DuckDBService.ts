@@ -112,13 +112,9 @@ export class DuckDBService {
         return;
       }
 
-      try {
-        entry.connection.closeSync();
-        entry.instance.closeSync();
-        this.connections.delete(profileId);
-      } catch (error) {
-        throw error;
-      }
+      entry.connection.closeSync();
+      entry.instance.closeSync();
+      this.connections.delete(profileId);
     });
   }
 
@@ -191,11 +187,7 @@ export class DuckDBService {
       // No connection to interrupt
       return;
     }
-    try {
-      entry.connection.interrupt();
-    } catch (error) {
-      throw error;
-    }
+    entry.connection.interrupt();
   }
 
   private getConnectionOrThrow(profileId: string): DuckDBConnection {
@@ -239,49 +231,45 @@ export class DuckDBService {
         readerPromise = Promise.race([basePromise, timeoutPromise]);
       }
 
-      try {
-        const reader = await readerPromise;
-        if (timer) {
-          clearTimeout(timer);
-        }
-        const executionTimeMs = performance.now() - start;
-
-        const columnNames = reader.columnNames();
-        const columnTypes = reader.columnTypes();
-
-        const columns = columnNames.map((name, index) => ({
-          name,
-          dataType: columnTypes[index].toString(),
-        }));
-
-        const rows = reader.getRows();
-        let resultRows = rows;
-        let truncated = false;
-        if (rowLimit && rowLimit > 0) {
-          if (rows.length > rowLimit) {
-            resultRows = rows.slice(0, rowLimit);
-            truncated = true;
-          }
-        }
-
-        const statementType = detectStatementType(sql);
-
-        // For DML operations, rowCount represents affected rows
-        // For DQL operations, rowCount represents returned rows
-        const affectedRows = statementType === 'DML' ? resultRows.length : undefined;
-
-        return {
-          columns,
-          rows: resultRows,
-          rowCount: resultRows.length,
-          executionTimeMs,
-          truncated,
-          statementType,
-          affectedRows,
-        };
-      } catch (error) {
-        throw error;
+      const reader = await readerPromise;
+      if (timer) {
+        clearTimeout(timer);
       }
+      const executionTimeMs = performance.now() - start;
+
+      const columnNames = reader.columnNames();
+      const columnTypes = reader.columnTypes();
+
+      const columns = columnNames.map((name, index) => ({
+        name,
+        dataType: columnTypes[index].toString(),
+      }));
+
+      const rows = reader.getRows();
+      let resultRows = rows;
+      let truncated = false;
+      if (rowLimit && rowLimit > 0) {
+        if (rows.length > rowLimit) {
+          resultRows = rows.slice(0, rowLimit);
+          truncated = true;
+        }
+      }
+
+      const statementType = detectStatementType(sql);
+
+      // For DML operations, rowCount represents affected rows
+      // For DQL operations, rowCount represents returned rows
+      const affectedRows = statementType === 'DML' ? resultRows.length : undefined;
+
+      return {
+        columns,
+        rows: resultRows,
+        rowCount: resultRows.length,
+        executionTimeMs,
+        truncated,
+        statementType,
+        affectedRows,
+      };
     });
   }
 
@@ -404,21 +392,17 @@ export class DuckDBService {
     return this.withProfileLock(profileId, async () => {
       const connection = this.getConnectionOrThrow(profileId);
 
-      try {
-        const escapedPath = filePath.replace(/'/g, "''");
-        const copySQL = `COPY (${sql}) TO '${escapedPath}' (HEADER, DELIMITER ',');`;
+      const escapedPath = filePath.replace(/'/g, "''");
+      const copySQL = `COPY (${sql}) TO '${escapedPath}' (HEADER, DELIMITER ',');`;
 
-        await connection.run(copySQL);
+      await connection.run(copySQL);
 
-        const countSQL = `SELECT COUNT(*) FROM (${sql})`;
-        const countReader = await connection.runAndReadAll(countSQL);
-        const rows = countReader.getRows();
-        const rowCount = Number(rows[0][0]);
+      const countSQL = `SELECT COUNT(*) FROM (${sql})`;
+      const countReader = await connection.runAndReadAll(countSQL);
+      const rows = countReader.getRows();
+      const rowCount = Number(rows[0][0]);
 
-        return rowCount;
-      } catch (error) {
-        throw error;
-      }
+      return rowCount;
     });
   }
 }
