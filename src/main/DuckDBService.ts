@@ -536,7 +536,8 @@ function detectStatementType(sql: string): StatementType {
   }
 
   // Utility/metadata commands - treat as DQL since they query information
-  if (['SHOW', 'DESCRIBE', 'DESC', 'EXPLAIN', 'SUMMARIZE', 'PRAGMA'].includes(firstWord)) {
+  // COPY is included here as it's used for data export/import operations
+  if (['SHOW', 'DESCRIBE', 'DESC', 'EXPLAIN', 'SUMMARIZE', 'PRAGMA', 'COPY'].includes(firstWord)) {
     return 'DQL';
   }
 
