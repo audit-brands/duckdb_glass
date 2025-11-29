@@ -192,6 +192,13 @@ export default function DatabaseOverview({ profiles }: DatabaseOverviewProps) {
                       Query
                     </button>
                     <button
+                      onClick={() => navigate(`/db/${profile.id}/extensions`)}
+                      className="text-sm px-3 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
+                      title="Manage DuckDB extensions"
+                    >
+                      🔌 Extensions
+                    </button>
+                    <button
                       onClick={() => navigate(`/db/${profile.id}/import`)}
                       className="text-sm px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                     >

@@ -342,27 +342,36 @@ All Phase 1 security hardening complete. No critical or medium severity security
 
 ---
 
-## Phase 4: Data Import/Export Enhancements
+## Phase 4: Data Import/Export Enhancements ✅ COMPLETE
 
-### Export Functionality
+### Export Functionality ✅ COMPLETE
 
 **Goal**: Enable users to export query results in multiple formats.
 
 **Features**:
-- Export to CSV (already implemented in DuckDBService)
-- Export to JSON
-- Export to Parquet
-- Copy to clipboard (formatted for Excel, Markdown, etc.)
-- Export with optional row limit
+- Export to CSV ✅ (implemented in QueryEditor with file picker)
+- Export to JSON (future enhancement)
+- Export to Parquet (future enhancement)
+- Copy to clipboard (formatted for Excel, Markdown, etc.) (future enhancement)
+- Export with optional row limit ✅ (uses current result limit)
 
 **Tasks**:
-- [ ] Add "Export" button to query results
-- [ ] Create ExportDialog component with format selection
-- [ ] Implement JSON export in DuckDBService
-- [ ] Implement Parquet export in DuckDBService
-- [ ] Add clipboard copy functionality
-- [ ] Show export progress for large datasets
-- [ ] Add export format preference in Settings
+- [x] Add "Export CSV" button to query results (QueryEditor.tsx)
+- [x] Implement CSV export in DuckDBService using COPY TO
+- [x] Add file picker for export destination
+- [x] Show success/error feedback with toast notifications
+- [ ] Create ExportDialog component with format selection (future)
+- [ ] Implement JSON export in DuckDBService (future)
+- [ ] Implement Parquet export in DuckDBService (future)
+- [ ] Add clipboard copy functionality (future)
+- [ ] Show export progress for large datasets (future)
+- [ ] Add export format preference in Settings (future)
+
+**Implementation Notes**:
+- CSV export implemented using DuckDB's native `COPY TO` command
+- File picker integration via `window.orbitalDb.files.selectExportFile()`
+- Exports use current query results with applied row limit
+- Tested with spatial queries - CSV export working correctly
 
 ### Import Wizard Improvements
 
@@ -438,7 +447,7 @@ interface DuckDBProfile {
 - [ ] Implement file metadata caching
 - [ ] Handle network errors gracefully
 
-### Extension Management
+### Extension Management ✅ COMPLETE
 
 **Goal**: Make it easy to install and use DuckDB extensions.
 
@@ -448,22 +457,35 @@ interface DuckDBProfile {
 - Users can query extension status with `SELECT * FROM duckdb_extensions()`
 
 **Features**:
-- UI for browsing available extensions
-- One-click extension installation
-- Extension status indicators (installed/loaded)
-- Auto-load extensions on connection ✅ (already works)
-- Extension documentation links
+- UI for browsing available extensions ✅
+- One-click extension installation ✅
+- Extension status indicators (installed/loaded/auto-load) ✅
+- Auto-load extensions on connection ✅
+- Search/filter extensions by name or description ✅
+- Statistics dashboard showing extension counts ✅
 
 **Tasks**:
 - [x] Store loaded extensions in profile settings (backend complete)
 - [x] Auto-load extensions on connection open (backend complete)
-- [ ] Create Extensions management UI page
-- [ ] List available DuckDB extensions via `duckdb_extensions()` query
-- [ ] Add "Install" button for each extension (runs `INSTALL {ext}`)
-- [ ] Add "Load" toggle for each extension (adds/removes from profile.extensions)
-- [ ] Show extension status indicators (installed/loaded/available)
-- [ ] Add extension usage examples and documentation links
-- [ ] Add simple text input in ProfileForm for manually adding extensions
+- [x] Create Extensions management UI page (ExtensionsPage.tsx)
+- [x] List available DuckDB extensions via `duckdb_extensions()` query
+- [x] Add "Install" button for each extension (runs `INSTALL {ext}`)
+- [x] Add "Load" button for installed extensions (runs `LOAD {ext}`)
+- [x] Add auto-load toggle for each extension (adds/removes from profile.extensions)
+- [x] Show extension status indicators (Loaded/Installed/Auto-load badges)
+- [x] Handle DuckDB LIST type parsing for aliases field
+- [x] Add proper connection management (acquireConnection/releaseConnection)
+- [x] Implement toast notifications for user feedback
+
+**Implementation Notes**:
+- Created ExtensionsPage.tsx with full extension management UI
+- Added route `/db/:profileId/extensions` to App.tsx
+- Added Extensions navigation button (🔌) to DatabaseOverview.tsx
+- Properly handles DuckDB LIST type with `{items: [...]}` structure
+- Uses same connection pattern as SchemaPage (await acquireConnection().unwrap())
+- Displays statistics: Total Extensions, Installed, Loaded, Auto-load counts
+- Tested with spatial extension - install, load, and query execution working
+- Status badges: Loaded (green), Installed (blue), Auto-load (purple)
 
 ---
 
@@ -616,7 +638,33 @@ interface DuckDBProfile {
 ## Technical Debt & Maintenance
 
 ### Current Technical Debt
-- None identified (codebase is clean as of v0.1.0)
+
+**Console Warnings** (Priority: Low - Non-blocking)
+
+1. **Redux Selector Warning in TopBar.tsx**
+   - **Issue**: `useSelector` returns a fresh object `{ activeProfile, status, error }` on every render, causing unnecessary re-renders
+   - **Root Cause**: Inline object creation in selector breaks referential equality
+   - **Fix**:
+     - [ ] Create memoized selector using `createSelector` from Reselect
+     - [ ] Update TopBar.tsx to use memoized selector
+   - **Files**: `src/renderer/components/TopBar.tsx`
+   - **Priority**: Low (performance optimization)
+
+2. **React Router Future Flags**
+   - **Issue**: Warnings about upcoming React Router v7 behavior changes
+   - **Details**:
+     - `v7_startTransition`: Will wrap state updates in React 18's startTransition
+     - `v7_relativeSplatPath`: Changes relative path resolution in splat routes
+   - **Options**:
+     - [ ] Option A: Add future flags now to test v7 behavior early (recommended)
+     - [ ] Option B: Add backlog ticket to address before React Router v7 upgrade
+   - **Files**: `src/renderer/main.tsx` or router setup location
+   - **Priority**: Low (informational warning, no current impact)
+
+3. **React DevTools Reminder**
+   - **Issue**: Console message about React DevTools not being installed
+   - **Resolution**: Not a code issue - install browser extension locally if enhanced debugging is desired
+   - **Priority**: Informational only (no action needed)
 
 ### Ongoing Maintenance Tasks
 - [ ] Keep @duckdb/node-api updated with latest releases
@@ -646,6 +694,11 @@ interface DuckDBProfile {
 
 ---
 
-**Last Updated**: 2025-11-26
+**Last Updated**: 2025-11-29
 **Current Version**: v0.1.0
-**Next Milestone**: v0.2.0 - File Management & SQL Completeness
+**Next Milestone**: v0.3.0 - Performance & UX
+
+**Recent Completions**:
+- Phase 2: Query Experience Improvements ✅
+- Phase 4: Data Import/Export (CSV Export) ✅
+- Phase 5: Extension Management UI ✅

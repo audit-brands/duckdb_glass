@@ -11,6 +11,7 @@ import QueryPage from './routes/QueryPage';
 import ImportDataPage from './routes/ImportDataPage';
 import CreateDatabasePage from './routes/CreateDatabasePage';
 import SettingsPage from './routes/SettingsPage';
+import ExtensionsPage from './routes/ExtensionsPage';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="create-database" element={<CreateDatabasePage />} />
         <Route path="db/:profileId/schema" element={<SchemaPage />} />
         <Route path="db/:profileId/query" element={<QueryPage />} />
+        <Route path="db/:profileId/extensions" element={<ExtensionsPage />} />
         <Route path="db/:profileId/import" element={<ImportDataPage />} />
         <Route path="db/:profileId/table/:schemaName/:tableName" element={<TablePage />} />
         <Route
