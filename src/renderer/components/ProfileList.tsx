@@ -45,9 +45,11 @@ export default function ProfileList({ profiles, onEdit, onDelete }: ProfileListP
                   </span>
                 )}
               </div>
-              <div className="truncate">
-                <span className="font-medium">Path:</span> {profile.dbPath}
-              </div>
+              {profile.description && (
+                <div className="italic text-gray-700 dark:text-gray-300">
+                  {profile.description}
+                </div>
+              )}
             </div>
           <div className="grid grid-cols-3 gap-2">
             {/* Top Row - Database Actions */}
