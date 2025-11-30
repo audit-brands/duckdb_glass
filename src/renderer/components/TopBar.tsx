@@ -1,31 +1,37 @@
 // Top bar component
 
+import { useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '../state/hooks';
 import { toggleTheme } from '../state/slices/uiSlice';
 
 export default function TopBar() {
   const dispatch = useAppDispatch();
   const theme = useAppSelector((state) => state.ui.theme);
-  const { activeProfile, status, error } = useAppSelector((state) => {
-    const activeId = state.profiles.activeProfileId;
-    const profile = activeId ? state.profiles.list.find((p) => p.id === activeId) : null;
-    const connectionStatus = activeId ? state.profiles.connectionStatus[activeId] : undefined;
-    const connectionError = activeId ? state.profiles.connectionErrors[activeId] : undefined;
-    return {
-      activeProfile: profile,
-      status: connectionStatus,
-      error: connectionError,
-    };
-  });
+
+  // Select primitive values separately to avoid unnecessary re-renders
+  const activeProfileId = useAppSelector((state) => state.profiles.activeProfileId);
+  const profiles = useAppSelector((state) => state.profiles.list);
+  const connectionStatus = useAppSelector((state) =>
+    activeProfileId ? state.profiles.connectionStatus[activeProfileId] : undefined
+  );
+  const connectionError = useAppSelector((state) =>
+    activeProfileId ? state.profiles.connectionErrors[activeProfileId] : undefined
+  );
+
+  // Memoize the derived profile object
+  const activeProfile = useMemo(() =>
+    activeProfileId ? profiles.find((p) => p.id === activeProfileId) : null,
+    [activeProfileId, profiles]
+  );
 
   const statusStyles =
-    status === 'failed'
+    connectionStatus === 'failed'
       ? {
           container: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
           dot: 'bg-red-500',
           label: 'Connection Failed',
         }
-      : status === 'connecting'
+      : connectionStatus === 'connecting'
         ? {
             container: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300',
             dot: 'bg-yellow-500 animate-pulse',
@@ -58,9 +64,9 @@ export default function TopBar() {
                     {activeProfile.dbPath === ':memory:' ? '🧠' : '💾'}
                   </span>
                 </div>
-                {error && (
+                {connectionError && (
                   <span className="text-xs opacity-80">
-                    {error}
+                    {connectionError}
                   </span>
                 )}
               </div>

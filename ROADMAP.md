@@ -789,32 +789,42 @@ SELECT * FROM sales_data JOIN customer_data ON sales_data.customer_id = customer
 
 ### Current Technical Debt
 
-**Console Warnings** (Priority: Low - Non-blocking)
+**Console Warnings** ✅ RESOLVED (2025-11-30)
 
-1. **Redux Selector Warning in TopBar.tsx**
-   - **Issue**: `useSelector` returns a fresh object `{ activeProfile, status, error }` on every render, causing unnecessary re-renders
-   - **Root Cause**: Inline object creation in selector breaks referential equality
-   - **Fix**:
-     - [ ] Create memoized selector using `createSelector` from Reselect
-     - [ ] Update TopBar.tsx to use memoized selector
-   - **Files**: `src/renderer/components/TopBar.tsx`
-   - **Priority**: Low (performance optimization)
+All console warnings have been addressed:
 
-2. **React Router Future Flags**
+1. **Redux Selector Warning in TopBar.tsx** ✅ FIXED
+   - **Issue**: `useSelector` returned a fresh object on every render, causing unnecessary re-renders
+   - **Root Cause**: Inline object creation in selector broke referential equality
+   - **Fix Applied**:
+     - ✅ Refactored to select primitive values separately
+     - ✅ Used `useMemo` for derived profile object
+     - ✅ Prevents object creation on every render
+   - **Files Modified**: `src/renderer/components/TopBar.tsx`
+   - **Status**: Resolved - no more selector warnings
+
+2. **React Router Future Flags** ✅ FIXED
    - **Issue**: Warnings about upcoming React Router v7 behavior changes
-   - **Details**:
-     - `v7_startTransition`: Will wrap state updates in React 18's startTransition
-     - `v7_relativeSplatPath`: Changes relative path resolution in splat routes
-   - **Options**:
-     - [ ] Option A: Add future flags now to test v7 behavior early (recommended)
-     - [ ] Option B: Add backlog ticket to address before React Router v7 upgrade
-   - **Files**: `src/renderer/main.tsx` or router setup location
-   - **Priority**: Low (informational warning, no current impact)
+   - **Fix Applied**:
+     - ✅ Added `v7_startTransition: true` flag (React 18 startTransition)
+     - ✅ Added `v7_relativeSplatPath: true` flag (relative path resolution)
+     - ✅ Opted into v7 behavior early for testing
+   - **Files Modified**: `src/renderer/main.tsx`
+   - **Status**: Resolved - ready for React Router v7
 
-3. **React DevTools Reminder**
+3. **SerializableStateInvariantMiddleware Warnings** ✅ FIXED
+   - **Issue**: Middleware exceeded 32ms threshold with large profile/schema data
+   - **Fix Applied**:
+     - ✅ Increased `warnAfter` threshold from 32ms to 128ms
+     - ✅ Configured in Redux store middleware
+     - ✅ Only affects development mode (disabled in production)
+   - **Files Modified**: `src/renderer/state/store.ts`
+   - **Status**: Resolved - warnings suppressed for normal operations
+
+4. **React DevTools Reminder**
    - **Issue**: Console message about React DevTools not being installed
-   - **Resolution**: Not a code issue - install browser extension locally if enhanced debugging is desired
-   - **Priority**: Informational only (no action needed)
+   - **Resolution**: Informational only - install browser extension locally for enhanced debugging
+   - **Priority**: No action needed (not a code issue)
 
 ### Ongoing Maintenance Tasks
 - [ ] Keep @duckdb/node-api updated with latest releases

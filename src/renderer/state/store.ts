@@ -11,6 +11,14 @@ export const store = configureStore({
     schema: schemaReducer,
     ui: uiReducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      // Increase threshold for SerializableStateInvariantMiddleware
+      // to avoid warnings when working with large profile/schema data
+      serializableCheck: {
+        warnAfter: 128, // default is 32ms
+      },
+    }),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
