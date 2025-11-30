@@ -1,8 +1,9 @@
 // Connection creation/edit form
 
 import { useState } from 'react';
-import type { DuckDBProfileInput, AttachedFile } from '@shared/types';
+import type { DuckDBProfileInput, AttachedFile, S3Config } from '@shared/types';
 import AttachedFileList from './AttachedFileList';
+import S3ConfigForm from './S3ConfigForm';
 
 interface ProfileFormProps {
   onSubmit: (profile: DuckDBProfileInput) => void;
@@ -14,6 +15,7 @@ export default function ProfileForm({ onSubmit, onCancel, initialValues }: Profi
   const [name, setName] = useState(initialValues?.name || '');
   const [dbPath, setDbPath] = useState(initialValues?.dbPath || ':memory:');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>(initialValues?.attachedFiles || []);
+  const [s3Config, setS3Config] = useState<S3Config | undefined>(initialValues?.s3Config);
   const [error, setError] = useState<string | null>(null);
 
   const handleSelectDatabase = async () => {
@@ -58,6 +60,7 @@ export default function ProfileForm({ onSubmit, onCancel, initialValues }: Profi
       name,
       dbPath,
       attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
+      s3Config,
     });
   };
 
@@ -131,6 +134,13 @@ export default function ProfileForm({ onSubmit, onCancel, initialValues }: Profi
         <AttachedFileList
           files={attachedFiles}
           onChange={setAttachedFiles}
+        />
+      </div>
+
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <S3ConfigForm
+          config={s3Config}
+          onChange={setS3Config}
         />
       </div>
 

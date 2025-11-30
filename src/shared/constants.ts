@@ -48,6 +48,11 @@ export const IPC_CHANNELS = {
 
   // App metadata
   APP_GET_VERSION: 'orbitalDb:app:getVersion',
+
+  // Credential encryption
+  CREDENTIALS_ENCRYPT: 'orbitalDb:credentials:encrypt',
+  CREDENTIALS_DECRYPT: 'orbitalDb:credentials:decrypt',
+  CREDENTIALS_CHECK_ENCRYPTION_AVAILABLE: 'orbitalDb:credentials:checkEncryptionAvailable',
 } as const;
 
 export const DEFAULT_RESULT_LIMIT = 1000;

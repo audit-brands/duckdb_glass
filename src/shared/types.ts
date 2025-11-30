@@ -16,6 +16,23 @@ export interface AttachedFile {
   csvOptions?: CsvOptions; // CSV-specific options (only used when type is 'csv' or 'auto')
 }
 
+export interface S3Config {
+  // Provider type determines how credentials are sourced
+  provider: 'config' | 'credential_chain' | 'env';
+
+  // Manual credentials (used when provider = 'config')
+  // Note: secretKey is stored encrypted in profiles.json
+  keyId?: string;           // AWS_ACCESS_KEY_ID
+  secretKey?: string;       // AWS_SECRET_ACCESS_KEY (encrypted)
+  region?: string;          // AWS region (default: us-east-1)
+  sessionToken?: string;    // Optional: for temporary credentials (encrypted)
+
+  // Advanced options
+  endpoint?: string;        // Custom S3 endpoint (e.g., MinIO, DigitalOcean Spaces, Cloudflare R2)
+  urlStyle?: 'vhost' | 'path';  // URL style (default: vhost)
+  useSSL?: boolean;         // Use HTTPS (default: true)
+}
+
 export interface QueryHistoryEntry {
   id: string;
   sql: string;
@@ -46,6 +63,7 @@ export interface DuckDBProfile {
   attachedFiles?: AttachedFile[]; // Files attached as queryable tables/views
   queryHistory?: QueryHistoryEntry[]; // Last N queries executed on this profile
   savedSnippets?: SavedSnippet[]; // User-saved query snippets
+  s3Config?: S3Config; // S3 authentication and configuration for remote file access
   createdAt: string;
   updatedAt: string;
 }

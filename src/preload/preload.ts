@@ -118,4 +118,12 @@ contextBridge.exposeInMainWorld('orbitalDb', {
     saveParquetAs: (): Promise<string | null> =>
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SAVE_PARQUET),
   },
+  credentials: {
+    checkEncryptionAvailable: (): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CREDENTIALS_CHECK_ENCRYPTION_AVAILABLE),
+    encrypt: (plaintext: string): Promise<string> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CREDENTIALS_ENCRYPT, plaintext),
+    decrypt: (encrypted: string): Promise<string> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CREDENTIALS_DECRYPT, encrypted),
+  },
 });

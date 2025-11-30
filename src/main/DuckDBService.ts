@@ -2,6 +2,7 @@
 
 import { DuckDBInstance, DuckDBConnection } from '@duckdb/node-api';
 import { CONFIG } from './config';
+import { CredentialManager } from './CredentialManager';
 import type {
   DuckDBProfile,
   QueryResult,
@@ -73,6 +74,11 @@ export class DuckDBService {
           for (const ext of profile.extensions) {
             await connection.run(`LOAD '${ext}';`);
           }
+        }
+
+        // Configure S3 authentication if provided
+        if (profile.s3Config) {
+          await this.configureS3Secrets(connection, profile.s3Config);
         }
 
         // Create views for attached files (non-fatal - log warnings for failures)
@@ -184,6 +190,85 @@ export class DuckDBService {
       throw new Error(
         `Failed to attach file "${file.alias}": ${(error as Error).message}`
       );
+    }
+  }
+
+  /**
+   * Configures S3 authentication secrets for DuckDB using CREATE SECRET command.
+   * This enables querying remote S3 files (s3://) and HTTPS URLs.
+   *
+   * Supports three authentication providers:
+   * - 'config': Manual credentials (keyId, secretKey, region)
+   * - 'credential_chain': Automatic discovery from environment/IAM/config files
+   * - 'env': Use environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+   *
+   * @param connection - Active DuckDB connection
+   * @param s3Config - S3 configuration with encrypted credentials
+   */
+  private async configureS3Secrets(
+    connection: DuckDBConnection,
+    s3Config: import('../shared/types').S3Config
+  ): Promise<void> {
+    try {
+      // Install and load httpfs extension if not already loaded
+      // This extension is required for S3 and HTTPS file access
+      await connection.run(`INSTALL httpfs;`);
+      await connection.run(`LOAD httpfs;`);
+
+      // Build CREATE SECRET command based on provider type
+      let secretSQL: string;
+
+      if (s3Config.provider === 'config') {
+        // Manual credentials - decrypt sensitive fields
+        const decryptedKeyId = s3Config.keyId ? CredentialManager.decrypt(s3Config.keyId) : '';
+        const decryptedSecretKey = s3Config.secretKey ? CredentialManager.decrypt(s3Config.secretKey) : '';
+        const decryptedSessionToken = s3Config.sessionToken ? CredentialManager.decrypt(s3Config.sessionToken) : '';
+
+        if (!decryptedKeyId || !decryptedSecretKey) {
+          throw new Error('S3 config provider is "config" but keyId or secretKey is missing');
+        }
+
+        // Escape single quotes in credentials
+        const escapedKeyId = decryptedKeyId.replace(/'/g, "''");
+        const escapedSecretKey = decryptedSecretKey.replace(/'/g, "''");
+        const escapedSessionToken = decryptedSessionToken ? decryptedSessionToken.replace(/'/g, "''") : '';
+
+        const region = s3Config.region || 'us-east-1';
+        const escapedRegion = region.replace(/'/g, "''");
+
+        // Build CREATE SECRET with manual credentials
+        secretSQL = `
+          CREATE OR REPLACE SECRET orbital_s3_secret (
+            TYPE S3,
+            KEY_ID '${escapedKeyId}',
+            SECRET '${escapedSecretKey}',
+            REGION '${escapedRegion}'${escapedSessionToken ? `,\n            SESSION_TOKEN '${escapedSessionToken}'` : ''}${s3Config.endpoint ? `,\n            ENDPOINT '${s3Config.endpoint.replace(/'/g, "''")}'` : ''}${s3Config.urlStyle ? `,\n            URL_STYLE '${s3Config.urlStyle}'` : ''}${s3Config.useSSL !== undefined ? `,\n            USE_SSL ${s3Config.useSSL ? 'TRUE' : 'FALSE'}` : ''}
+          );
+        `;
+      } else if (s3Config.provider === 'credential_chain') {
+        // Automatic credential discovery from environment, IAM roles, or config files
+        secretSQL = `
+          CREATE OR REPLACE SECRET orbital_s3_secret (
+            TYPE S3,
+            PROVIDER credential_chain${s3Config.region ? `,\n            REGION '${s3Config.region.replace(/'/g, "''")}'` : ''}${s3Config.endpoint ? `,\n            ENDPOINT '${s3Config.endpoint.replace(/'/g, "''")}'` : ''}${s3Config.urlStyle ? `,\n            URL_STYLE '${s3Config.urlStyle}'` : ''}${s3Config.useSSL !== undefined ? `,\n            USE_SSL ${s3Config.useSSL ? 'TRUE' : 'FALSE'}` : ''}
+          );
+        `;
+      } else if (s3Config.provider === 'env') {
+        // Use environment variables AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+        secretSQL = `
+          CREATE OR REPLACE SECRET orbital_s3_secret (
+            TYPE S3,
+            PROVIDER env${s3Config.region ? `,\n            REGION '${s3Config.region.replace(/'/g, "''")}'` : ''}${s3Config.endpoint ? `,\n            ENDPOINT '${s3Config.endpoint.replace(/'/g, "''")}'` : ''}${s3Config.urlStyle ? `,\n            URL_STYLE '${s3Config.urlStyle}'` : ''}${s3Config.useSSL !== undefined ? `,\n            USE_SSL ${s3Config.useSSL ? 'TRUE' : 'FALSE'}` : ''}
+          );
+        `;
+      } else {
+        throw new Error(`Unsupported S3 provider: ${s3Config.provider}`);
+      }
+
+      // Execute CREATE SECRET command
+      await connection.run(secretSQL);
+    } catch (error) {
+      throw new Error(`Failed to configure S3 secrets: ${(error as Error).message}`);
     }
   }
 

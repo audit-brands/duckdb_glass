@@ -86,6 +86,11 @@ declare global {
         saveJsonAs(): Promise<string | null>;
         saveParquetAs(): Promise<string | null>;
       };
+      credentials: {
+        checkEncryptionAvailable(): Promise<boolean>;
+        encrypt(plaintext: string): Promise<string>;
+        decrypt(encrypted: string): Promise<string>;
+      };
     };
   }
 }

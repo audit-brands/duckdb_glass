@@ -1,6 +1,7 @@
 // IPC Handlers - register all IPC communication handlers
 
 import { ipcMain, app, dialog } from 'electron';
+import { CredentialManager } from './CredentialManager';
 import {
   IPC_CHANNELS,
   MAX_SNIPPETS_PER_PROFILE,
@@ -579,6 +580,36 @@ export function registerIpcHandlers(
       }
     }
   );
+
+  // Credential encryption
+  // These handlers allow the renderer process to encrypt/decrypt sensitive credentials
+  // before saving to or after loading from profiles.json
+  ipcMain.handle(IPC_CHANNELS.CREDENTIALS_CHECK_ENCRYPTION_AVAILABLE, async () => {
+    try {
+      return CredentialManager.isEncryptionAvailable();
+    } catch (error) {
+      console.error('Failed to check encryption availability:', error);
+      return false;
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CREDENTIALS_ENCRYPT, async (_event, plaintext: string) => {
+    try {
+      return CredentialManager.encrypt(plaintext);
+    } catch (error) {
+      console.error('Failed to encrypt credential:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CREDENTIALS_DECRYPT, async (_event, encrypted: string) => {
+    try {
+      return CredentialManager.decrypt(encrypted);
+    } catch (error) {
+      console.error('Failed to decrypt credential:', error);
+      throw error;
+    }
+  });
 
   console.log('IPC handlers registered');
 }
