@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../state/hooks';
 import { loadProfiles, createProfile, updateProfile, deleteProfile } from '../state/slices/profilesSlice';
-import { addToast } from '../state/slices/uiSlice';
+import { addToast, showConfirmDialog } from '../state/slices/uiSlice';
 import type { DuckDBProfile, DuckDBProfileInput } from '@shared/types';
 import ProfileForm from '../components/ProfileForm';
 import ProfileList from '../components/ProfileList';
@@ -76,22 +76,29 @@ export default function ProfilesPage() {
     const profile = profiles.find(p => p.id === id);
     const connectionName = profile?.name || 'connection';
 
-    if (confirm(`Are you sure you want to delete the connection "${connectionName}"?`)) {
-      try {
-        await dispatch(deleteProfile(id));
-        dispatch(addToast({
-          type: 'success',
-          message: `Connection "${connectionName}" deleted successfully`,
-          duration: 4000,
-        }));
-      } catch (err) {
-        dispatch(addToast({
-          type: 'error',
-          message: `Failed to delete connection: ${(err as Error).message}`,
-          duration: 7000,
-        }));
-      }
-    }
+    dispatch(showConfirmDialog({
+      title: 'Delete Connection',
+      message: `Are you sure you want to delete the connection "${connectionName}"?\n\nThis action cannot be undone.`,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await dispatch(deleteProfile(id));
+          dispatch(addToast({
+            type: 'success',
+            message: `Connection "${connectionName}" deleted successfully`,
+            duration: 4000,
+          }));
+        } catch (err) {
+          dispatch(addToast({
+            type: 'error',
+            message: `Failed to delete connection: ${(err as Error).message}`,
+            duration: 7000,
+          }));
+        }
+      },
+    }));
   };
 
   return (

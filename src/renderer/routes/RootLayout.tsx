@@ -5,7 +5,9 @@ import { Outlet } from 'react-router-dom';
 import { useAppSelector } from '../state/hooks';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
+import StatusBar from '../components/StatusBar';
 import ToastContainer from '../components/ToastContainer';
+import ConfirmDialogContainer from '../components/ConfirmDialogContainer';
 
 export default function RootLayout() {
   const theme = useAppSelector((state) => state.ui.theme);
@@ -27,8 +29,10 @@ export default function RootLayout() {
         <main className="flex-1 overflow-auto p-6">
           <Outlet />
         </main>
+        <StatusBar />
       </div>
       <ToastContainer />
+      <ConfirmDialogContainer />
     </div>
   );
 }

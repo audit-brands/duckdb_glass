@@ -10,6 +10,17 @@ export interface Toast {
   dismissible?: boolean; // Can user manually dismiss? (default: true)
 }
 
+export interface ConfirmDialogState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'danger' | 'warning' | 'info';
+  onConfirm?: () => void;
+  onCancel?: () => void;
+}
+
 export interface AppSettings {
   // Appearance
   themeMode: 'light' | 'dark' | 'auto';
@@ -27,6 +38,7 @@ interface UiState {
   theme: 'light' | 'dark'; // Resolved theme (computed from themeMode)
   sidebarCollapsed: boolean;
   toasts: Toast[];
+  confirmDialog: ConfirmDialogState;
   settings: AppSettings;
 }
 
@@ -76,6 +88,11 @@ const initialState: UiState = {
   theme: resolveTheme(loadedSettings.themeMode),
   sidebarCollapsed: false,
   toasts: [],
+  confirmDialog: {
+    isOpen: false,
+    title: '',
+    message: '',
+  },
   settings: loadedSettings,
 };
 
@@ -131,6 +148,19 @@ const uiSlice = createSlice({
     clearAllToasts: (state) => {
       state.toasts = [];
     },
+    showConfirmDialog: (state, action: PayloadAction<Omit<ConfirmDialogState, 'isOpen'>>) => {
+      state.confirmDialog = {
+        ...action.payload,
+        isOpen: true,
+      };
+    },
+    hideConfirmDialog: (state) => {
+      state.confirmDialog = {
+        isOpen: false,
+        title: '',
+        message: '',
+      };
+    },
   },
 });
 
@@ -142,7 +172,9 @@ export const {
   toggleSidebar,
   addToast,
   removeToast,
-  clearAllToasts
+  clearAllToasts,
+  showConfirmDialog,
+  hideConfirmDialog
 } = uiSlice.actions;
 
 export default uiSlice.reducer;
