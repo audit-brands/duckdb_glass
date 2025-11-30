@@ -132,6 +132,11 @@ export default function DatabaseOverview({ profiles }: DatabaseOverviewProps) {
                       </span>
                     )}
                   </div>
+                  {profile.description && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 italic">
+                      {profile.description}
+                    </p>
+                  )}
                   <p className="text-sm text-gray-600 dark:text-gray-400 truncate mb-3">
                     {profile.dbPath}
                   </p>

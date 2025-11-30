@@ -184,6 +184,7 @@ export default function ProfilesPage() {
             onCancel={handleCancelEdit}
             initialValues={editingProfile ? {
               name: editingProfile.name,
+              description: editingProfile.description,
               dbPath: editingProfile.dbPath,
               attachedFiles: editingProfile.attachedFiles,
               s3Config: editingProfile.s3Config,

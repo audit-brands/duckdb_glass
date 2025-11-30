@@ -56,6 +56,7 @@ export interface SavedSnippet {
 export interface DuckDBProfile {
   id: string;
   name: string;
+  description?: string; // Optional description/notes about the database
   dbPath: string; // ':memory:' or absolute path
   readOnly?: boolean;
   autoAttachDirs?: string[];

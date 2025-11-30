@@ -13,6 +13,7 @@ interface ProfileFormProps {
 
 export default function ProfileForm({ onSubmit, onCancel, initialValues }: ProfileFormProps) {
   const [name, setName] = useState(initialValues?.name || '');
+  const [description, setDescription] = useState(initialValues?.description || '');
   const [dbPath, setDbPath] = useState(initialValues?.dbPath || ':memory:');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>(initialValues?.attachedFiles || []);
   const [s3Config, setS3Config] = useState<S3Config | undefined>(initialValues?.s3Config);
@@ -58,6 +59,7 @@ export default function ProfileForm({ onSubmit, onCancel, initialValues }: Profi
     setError(null);
     onSubmit({
       name,
+      description: description.trim() || undefined,
       dbPath,
       attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
       s3Config,
@@ -76,6 +78,20 @@ export default function ProfileForm({ onSubmit, onCancel, initialValues }: Profi
           placeholder="My Database"
           required
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Connection Description</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="input-field w-full resize-none"
+          placeholder="Optional notes about this database (e.g., 'Sales data for Q4 2024')"
+          rows={2}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Add notes to describe the data or purpose of this database
+        </p>
       </div>
 
       <div>
