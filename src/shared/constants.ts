@@ -58,6 +58,9 @@ export const IPC_CHANNELS = {
 export const DEFAULT_RESULT_LIMIT = 1000;
 export const DEFAULT_QUERY_TIMEOUT_MS = 60000;
 
+// Performance monitoring
+export const SLOW_QUERY_THRESHOLD_MS = 5000; // Queries longer than 5s are considered slow
+
 // Saved snippets limits
 export const MAX_SNIPPETS_PER_PROFILE = 100;
 export const MAX_SNIPPET_NAME_LENGTH = 200;

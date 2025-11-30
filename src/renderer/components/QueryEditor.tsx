@@ -12,7 +12,7 @@ import SqlEditor from './SqlEditor';
 import ExplainPlan from './ExplainPlan';
 import { ExportDialog, type ExportFormat, type ExportOptions } from './ExportDialog';
 import { getBaseName } from '../utils/path';
-import { DEFAULT_RESULT_LIMIT, DEFAULT_QUERY_TIMEOUT_MS } from '@shared/constants';
+import { DEFAULT_RESULT_LIMIT, DEFAULT_QUERY_TIMEOUT_MS, SLOW_QUERY_THRESHOLD_MS } from '@shared/constants';
 import { useAppDispatch } from '../state/hooks';
 import { addToast } from '../state/slices/uiSlice';
 
@@ -136,10 +136,14 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
             ? ` - ${queryResult.rowCount.toLocaleString()} row${queryResult.rowCount !== 1 ? 's' : ''}`
             : '';
 
+          // Show warning toast for slow queries
+          const isSlow = queryResult.executionTimeMs >= SLOW_QUERY_THRESHOLD_MS;
           dispatch(addToast({
-            type: 'success',
-            message: `${typeLabel} executed successfully in ${queryResult.executionTimeMs.toFixed(0)}ms${rowInfo}`,
-            duration: 4000,
+            type: isSlow ? 'warning' : 'success',
+            message: isSlow
+              ? `${typeLabel} completed in ${(queryResult.executionTimeMs / 1000).toFixed(1)}s (slow query)${rowInfo}. Consider optimizing or adding indexes.`
+              : `${typeLabel} executed successfully in ${queryResult.executionTimeMs.toFixed(0)}ms${rowInfo}`,
+            duration: isSlow ? 7000 : 4000,
           }));
         }
 
@@ -380,20 +384,49 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
 
         {/* Progress Indicator */}
         {loading && (
-          <div className="mt-3 mb-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <div className={`mt-3 mb-2 rounded-lg p-3 ${
+            elapsedTime >= SLOW_QUERY_THRESHOLD_MS
+              ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700'
+              : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+          }`}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
-                <div className="animate-spin h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full"></div>
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                <div className={`animate-spin h-4 w-4 border-2 border-t-transparent rounded-full ${
+                  elapsedTime >= SLOW_QUERY_THRESHOLD_MS
+                    ? 'border-yellow-600 dark:border-yellow-400'
+                    : 'border-blue-600 dark:border-blue-400'
+                }`}></div>
+                <span className={`text-sm font-medium ${
+                  elapsedTime >= SLOW_QUERY_THRESHOLD_MS
+                    ? 'text-yellow-900 dark:text-yellow-200'
+                    : 'text-blue-900 dark:text-blue-200'
+                }`}>
                   {explainMode === 'off' ? 'Executing query...' : explainMode === 'explain' ? 'Generating query plan...' : 'Analyzing query execution...'}
+                  {elapsedTime >= SLOW_QUERY_THRESHOLD_MS && (
+                    <span className="ml-2 text-xs">
+                      (slow query)
+                    </span>
+                  )}
                 </span>
               </div>
-              <span className="text-sm text-blue-700 dark:text-blue-300 font-mono">
+              <span className={`text-sm font-mono font-semibold ${
+                elapsedTime >= SLOW_QUERY_THRESHOLD_MS
+                  ? 'text-yellow-700 dark:text-yellow-300'
+                  : 'text-blue-700 dark:text-blue-300'
+              }`}>
                 {(elapsedTime / 1000).toFixed(1)}s
               </span>
             </div>
-            <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-1.5 overflow-hidden">
-              <div className="h-full bg-blue-600 dark:bg-blue-400 animate-pulse" style={{ width: '100%' }}></div>
+            <div className={`w-full rounded-full h-1.5 overflow-hidden ${
+              elapsedTime >= SLOW_QUERY_THRESHOLD_MS
+                ? 'bg-yellow-200 dark:bg-yellow-800'
+                : 'bg-blue-200 dark:bg-blue-800'
+            }`}>
+              <div className={`h-full animate-pulse ${
+                elapsedTime >= SLOW_QUERY_THRESHOLD_MS
+                  ? 'bg-yellow-600 dark:bg-yellow-400'
+                  : 'bg-blue-600 dark:bg-blue-400'
+              }`} style={{ width: '100%' }}></div>
             </div>
           </div>
         )}

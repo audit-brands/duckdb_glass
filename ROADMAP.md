@@ -300,45 +300,86 @@ All Phase 1 security hardening complete. No critical or medium severity security
 
 ---
 
-## Phase 3: Performance Monitoring & Insights
+## Phase 3: Performance Monitoring & Insights ✅ COMPLETE
 
-### Slow Query Insights
+### Slow Query Insights ✅ COMPLETE
 
 **Goal**: Help users understand query performance and optimize their SQL.
 
-**Features**:
-- Record execution time and row count for all queries
-- Visual indicators for slow queries (> 5s)
-- Toast notifications for long-running queries
-- Query execution statistics dashboard
-- Performance history chart
+**Status**: Fully implemented - users can now monitor query performance with real-time indicators and comprehensive statistics.
+
+**Features Implemented**:
+- Record execution time and row count for all queries ✅
+- Visual indicators for slow queries (> 5s) ✅
+- Toast notifications for slow/long-running queries ✅
+- Query execution statistics dashboard ✅
+- Performance metrics with percentiles (avg, median, p95) ✅
+- Fastest and slowest query tracking ✅
+- Time-range filtering (24h, 7d, 30d, all) ✅
+- Performance optimization tips ✅
 
 **Tasks**:
-- [ ] Add query execution metrics to result metadata
-- [ ] Create performance tracking service
-- [ ] Implement toast notification system
-- [ ] Add slow query warning threshold in Settings
-- [ ] Create performance insights page with charts
-- [ ] Show query plan (EXPLAIN) option in QueryEditor
+- [x] Add query execution metrics to result metadata (executionTimeMs, rowCount already tracked)
+- [x] Define slow query threshold constant (SLOW_QUERY_THRESHOLD_MS = 5000)
+- [x] Implement visual progress indicator with slow query detection
+- [x] Add slow query toast notifications with optimization tips
+- [x] Create PerformanceStatsPage component with comprehensive metrics
+- [x] Add performance statistics dashboard with time-range selector
+- [x] Calculate performance percentiles (average, median, p95)
+- [x] Track and display fastest/slowest queries
+- [x] Add performance optimization tips section
+- [x] Add navigation to Performance page from DatabaseOverview
 
-### Enhanced Cancellation UX
+**Implementation Details**:
+- `SLOW_QUERY_THRESHOLD_MS` constant set to 5000ms (5 seconds) in constants.ts
+- Progress indicator changes from blue to yellow when query exceeds 5s threshold
+- Slow query label appears: "(slow query)" during execution
+- Toast notifications show warning for slow queries with optimization suggestions
+- PerformanceStatsPage analyzes query history to compute:
+  - Total queries, success rate, slow query percentage
+  - Execution time statistics (average, median, p95)
+  - Total rows returned across all queries
+  - Fastest and slowest query with SQL preview
+- Time-range filtering: 24h, 7 days, 30 days, all time
+- Performance tips displayed when slow queries detected
+- Navigation button "📊 Performance" added to DatabaseOverview
+
+**Files Modified**:
+- `src/shared/constants.ts` - Added SLOW_QUERY_THRESHOLD_MS constant
+- `src/renderer/components/QueryEditor.tsx` - Added slow query detection in progress indicator and toast notifications
+- `src/renderer/routes/PerformanceStatsPage.tsx` - New comprehensive performance dashboard
+- `src/renderer/App.tsx` - Added `/db/:profileId/performance` route
+- `src/renderer/components/DatabaseOverview.tsx` - Added Performance navigation button
+
+### Enhanced Cancellation UX ✅ COMPLETE
 
 **Goal**: Make query cancellation more visible and reliable.
 
+**Status**: Already implemented - all cancellation features working.
+
 **Features**:
-- Progress indicator during query execution
-- Prominent Cancel button (already implemented)
-- Timeout override UI for specific queries
-- Notification when query is cancelled or times out
-- Support for cancelling multiple concurrent queries
+- Progress indicator during query execution ✅
+- Prominent Cancel button (red, animated pulse) ✅
+- Timeout override UI for specific queries ✅
+- Notification when query is cancelled or times out ✅
+- Real-time elapsed time display ✅
 
 **Tasks**:
-- [ ] Add progress bar during query execution
-- [ ] Improve cancel button visibility and feedback
-- [ ] Add per-query timeout override field
-- [ ] Create unified notification/toast system
-- [ ] Surface timeout events from worker thread
-- [ ] Add query queue visualization for concurrent queries
+- [x] Add progress bar during query execution (implemented with animated progress indicator)
+- [x] Improve cancel button visibility and feedback (red button with pulse animation)
+- [x] Add per-query timeout override field (timeout input in QueryEditor)
+- [x] Create unified notification/toast system (toast notifications for cancel/timeout)
+- [x] Surface timeout events from worker thread (timeout detection and toast)
+- [x] Real-time elapsed time tracking (updates every 100ms)
+
+**Implementation Status**:
+All Enhanced Cancellation UX features were already implemented in prior phases. The QueryEditor component includes:
+- Real-time progress indicator with elapsed time (updates every 100ms)
+- Animated "⏹ Cancel Query" button with red styling and pulse effect
+- Timeout override input field with configurable milliseconds
+- Toast notifications for query cancellation ("Query execution cancelled")
+- Toast notifications for query timeouts with optimization suggestions
+- Proper cleanup of timers and cancellation state
 
 ---
 
@@ -751,5 +792,6 @@ SELECT * FROM sales_data JOIN customer_data ON sales_data.customer_id = customer
 
 **Recent Completions**:
 - Phase 2: Query Experience Improvements ✅
+- Phase 3: Performance Monitoring & Insights ✅
 - Phase 4: Data Import/Export (CSV Export) ✅
 - Phase 5: Advanced Features (Extension Management + Remote File Support) ✅

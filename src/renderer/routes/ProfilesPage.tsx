@@ -100,7 +100,7 @@ export default function ProfilesPage() {
         <h1 className="text-3xl font-bold">Database Connections</h1>
         <div className="flex space-x-2">
           <button onClick={() => navigate('/create-database')} className="btn-primary">
-            🚀 Create Database 🚀
+            + New Database
           </button>
           <button
             onClick={() => {

@@ -187,6 +187,13 @@ export default function DatabaseOverview({ profiles }: DatabaseOverviewProps) {
                       🔌 Extensions
                     </button>
                     <button
+                      onClick={() => navigate(`/db/${profile.id}/performance`)}
+                      className="text-sm px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
+                      title="View query performance statistics"
+                    >
+                      📊 Performance
+                    </button>
+                    <button
                       onClick={() => navigate(`/db/${profile.id}/import`)}
                       className="text-sm px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                     >
