@@ -6,6 +6,14 @@ import { DuckDBService } from './DuckDBService';
 import { ProfileStore } from './ProfileStore';
 import { registerIpcHandlers } from './ipcHandlers';
 
+// Suppress Node.js warnings to prevent EPIPE errors when stdout/stderr closes
+// These warnings (deprecation, experimental features, etc.) can cause EPIPE
+// errors during app shutdown when attempting to write to closed streams
+process.removeAllListeners('warning');
+process.on('warning', () => {
+  // Silently ignore all warnings to prevent EPIPE
+});
+
 // Suppress EPIPE errors when stdout/stderr closes (harmless during shutdown)
 process.on('uncaughtException', (error) => {
   // Ignore EPIPE errors from console output
