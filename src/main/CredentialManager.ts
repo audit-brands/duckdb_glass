@@ -107,4 +107,18 @@ export class CredentialManager {
     }
     return config;
   }
+
+  /**
+   * Masks a credential for display purposes (shows first 4 and last 4 characters)
+   * @param credential The credential to mask
+   * @returns Masked credential string (e.g., "AKIA...XXXX")
+   */
+  static maskCredential(credential: string): string {
+    if (!credential || credential.length <= 8) {
+      return '••••••••';
+    }
+    const firstFour = credential.substring(0, 4);
+    const lastFour = credential.substring(credential.length - 4);
+    return `${firstFour}...${lastFour}`;
+  }
 }

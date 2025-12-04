@@ -290,35 +290,32 @@ export default function QueryEditor({ profileId, isReadOnly = false }: QueryEdit
     if (!result || !sql) return;
 
     try {
-      let filePath: string | null = null;
-      let rowCount = 0;
+      // SECURITY: Main process handles file dialogs and export - renderer never controls paths
+      let exportResult: { cancelled: boolean; rowCount: number; filePath?: string };
 
-      // Show appropriate save dialog based on format
       if (format === 'csv') {
-        filePath = await window.orbitalDb.files.saveCsvAs();
-        if (!filePath) return; // User cancelled
-
         // TODO: Use options.delimiter and options.header when CSV export is enhanced
-        rowCount = await window.orbitalDb.query.exportCsv(profileId, sql, filePath);
+        exportResult = await window.orbitalDb.query.exportCsv(profileId, sql);
       } else if (format === 'json') {
-        filePath = await window.orbitalDb.files.saveJsonAs();
-        if (!filePath) return; // User cancelled
-
         const jsonFormat = _options.jsonFormat || 'array';
-        rowCount = await window.orbitalDb.query.exportJson(profileId, sql, filePath, jsonFormat);
+        exportResult = await window.orbitalDb.query.exportJson(profileId, sql, jsonFormat);
       } else if (format === 'parquet') {
-        filePath = await window.orbitalDb.files.saveParquetAs();
-        if (!filePath) return; // User cancelled
+        exportResult = await window.orbitalDb.query.exportParquet(profileId, sql);
+      } else {
+        return;
+      }
 
-        rowCount = await window.orbitalDb.query.exportParquet(profileId, sql, filePath);
+      // User cancelled the dialog
+      if (exportResult.cancelled) {
+        return;
       }
 
       // Show success toast
-      const fileName = filePath ? (getBaseName(filePath) || 'file') : 'file';
+      const fileName = exportResult.filePath ? (getBaseName(exportResult.filePath) || 'file') : 'file';
       const formatLabel = format.toUpperCase();
       dispatch(addToast({
         type: 'success',
-        message: `Successfully exported ${rowCount.toLocaleString()} rows to ${fileName} (${formatLabel})`,
+        message: `Successfully exported ${exportResult.rowCount.toLocaleString()} rows to ${fileName} (${formatLabel})`,
         duration: 5000,
       }));
     } catch (err) {

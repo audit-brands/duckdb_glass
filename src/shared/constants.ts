@@ -51,7 +51,7 @@ export const IPC_CHANNELS = {
 
   // Credential encryption
   CREDENTIALS_ENCRYPT: 'orbitalDb:credentials:encrypt',
-  CREDENTIALS_DECRYPT: 'orbitalDb:credentials:decrypt',
+  CREDENTIALS_GET_MASKED: 'orbitalDb:credentials:getMasked',
   CREDENTIALS_CHECK_ENCRYPTION_AVAILABLE: 'orbitalDb:credentials:checkEncryptionAvailable',
 } as const;
 

@@ -23,6 +23,10 @@ export default function S3ConfigForm({ config, onChange, disabled }: S3ConfigFor
   const [isLoading, setIsLoading] = useState(false);
   const [encryptionAvailable, setEncryptionAvailable] = useState<boolean | null>(null);
   const [encryptionError, setEncryptionError] = useState<string | null>(null);
+  const [isEditingExisting, setIsEditingExisting] = useState(false);
+  const [maskedKeyId, setMaskedKeyId] = useState('');
+  const [maskedSecretKey, setMaskedSecretKey] = useState('');
+  const [maskedSessionToken, setMaskedSessionToken] = useState('');
 
   // Check if OS-level encryption is available on mount
   useEffect(() => {
@@ -42,27 +46,38 @@ export default function S3ConfigForm({ config, onChange, disabled }: S3ConfigFor
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount - intentionally not including 'provider'
 
-  // Load encrypted credentials when component mounts or config changes
+  // Load masked credentials when component mounts or config changes
+  // SECURITY: Credentials are shown as masked (e.g., "AKIA...XXXX") and are write-only
   useEffect(() => {
     if (config?.provider === 'config') {
       setIsLoading(true);
-      // Decrypt credentials from config
+      setIsEditingExisting(true);
+      // Get masked credentials for display (never plaintext)
       Promise.all([
-        config.keyId ? window.orbitalDb.credentials.decrypt(config.keyId) : Promise.resolve(''),
-        config.secretKey ? window.orbitalDb.credentials.decrypt(config.secretKey) : Promise.resolve(''),
-        config.sessionToken ? window.orbitalDb.credentials.decrypt(config.sessionToken) : Promise.resolve(''),
+        config.keyId ? window.orbitalDb.credentials.getMasked(config.keyId) : Promise.resolve(''),
+        config.secretKey ? window.orbitalDb.credentials.getMasked(config.secretKey) : Promise.resolve(''),
+        config.sessionToken ? window.orbitalDb.credentials.getMasked(config.sessionToken) : Promise.resolve(''),
       ])
-        .then(([decryptedKeyId, decryptedSecretKey, decryptedSessionToken]) => {
-          setKeyId(decryptedKeyId);
-          setSecretKey(decryptedSecretKey);
-          setSessionToken(decryptedSessionToken);
+        .then(([maskedKeyIdValue, maskedSecretKeyValue, maskedSessionTokenValue]) => {
+          setMaskedKeyId(maskedKeyIdValue);
+          setMaskedSecretKey(maskedSecretKeyValue);
+          setMaskedSessionToken(maskedSessionTokenValue);
+          // Don't populate input fields - credentials are write-only
+          setKeyId('');
+          setSecretKey('');
+          setSessionToken('');
         })
         .catch((error) => {
-          console.error('Failed to decrypt credentials:', error);
+          console.error('Failed to get masked credentials:', error);
         })
         .finally(() => {
           setIsLoading(false);
         });
+    } else {
+      setIsEditingExisting(false);
+      setMaskedKeyId('');
+      setMaskedSecretKey('');
+      setMaskedSessionToken('');
     }
   }, [config]);
 
@@ -75,41 +90,57 @@ export default function S3ConfigForm({ config, onChange, disabled }: S3ConfigFor
 
     // For config provider, encrypt credentials before passing to parent
     if (provider === 'config') {
-      if (!keyId || !secretKey) {
-        // Don't save incomplete config
+      // If editing existing config and no new credentials entered, preserve existing
+      if (isEditingExisting && !keyId && !secretKey && config?.keyId && config?.secretKey) {
+        const s3Config: S3Config = {
+          provider,
+          keyId: config.keyId, // Keep existing encrypted value
+          secretKey: config.secretKey, // Keep existing encrypted value
+          region,
+          sessionToken: sessionToken ? undefined : (config.sessionToken || undefined), // Update if changed
+          endpoint: endpoint || undefined,
+          urlStyle,
+          useSSL,
+        };
+        onChange(s3Config);
         return;
       }
 
-      setIsLoading(true);
-      setEncryptionError(null);
-      Promise.all([
-        window.orbitalDb.credentials.encrypt(keyId),
-        window.orbitalDb.credentials.encrypt(secretKey),
-        sessionToken ? window.orbitalDb.credentials.encrypt(sessionToken) : Promise.resolve(''),
-      ])
-        .then(([encryptedKeyId, encryptedSecretKey, encryptedSessionToken]) => {
-          const s3Config: S3Config = {
-            provider,
-            keyId: encryptedKeyId,
-            secretKey: encryptedSecretKey,
-            region,
-            sessionToken: encryptedSessionToken || undefined,
-            endpoint: endpoint || undefined,
-            urlStyle,
-            useSSL,
-          };
-          onChange(s3Config);
-          setEncryptionError(null);
-        })
-        .catch((error) => {
-          console.error('Failed to encrypt credentials:', error);
-          setEncryptionError((error as Error).message);
-          // Don't save config if encryption failed
-          onChange(undefined);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+      // If new credentials entered, encrypt them
+      if (keyId && secretKey) {
+        setIsLoading(true);
+        setEncryptionError(null);
+        Promise.all([
+          window.orbitalDb.credentials.encrypt(keyId),
+          window.orbitalDb.credentials.encrypt(secretKey),
+          sessionToken ? window.orbitalDb.credentials.encrypt(sessionToken) : Promise.resolve(''),
+        ])
+          .then(([encryptedKeyId, encryptedSecretKey, encryptedSessionToken]) => {
+            const s3Config: S3Config = {
+              provider,
+              keyId: encryptedKeyId,
+              secretKey: encryptedSecretKey,
+              region,
+              sessionToken: encryptedSessionToken || undefined,
+              endpoint: endpoint || undefined,
+              urlStyle,
+              useSSL,
+            };
+            onChange(s3Config);
+            setEncryptionError(null);
+          })
+          .catch((error) => {
+            console.error('Failed to encrypt credentials:', error);
+            setEncryptionError((error as Error).message);
+            // Don't save config if encryption failed
+            onChange(undefined);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      }
+      // If incomplete new credentials, don't save
+      return;
     } else {
       // For credential_chain and env providers, no encryption needed
       const s3Config: S3Config = {
@@ -121,7 +152,7 @@ export default function S3ConfigForm({ config, onChange, disabled }: S3ConfigFor
       };
       onChange(s3Config);
     }
-  }, [enabled, provider, keyId, secretKey, region, sessionToken, endpoint, urlStyle, useSSL, onChange]);
+  }, [enabled, provider, keyId, secretKey, region, sessionToken, endpoint, urlStyle, useSSL, onChange, isEditingExisting, config]);
 
   return (
     <div className="space-y-3">
@@ -179,18 +210,39 @@ export default function S3ConfigForm({ config, onChange, disabled }: S3ConfigFor
           {/* Manual Credentials (only for 'config' provider) */}
           {provider === 'config' && (
             <>
+              {/* Show masked credentials if editing existing */}
+              {isEditingExisting && maskedKeyId && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                    🔒 Existing Credentials (Encrypted)
+                  </p>
+                  <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400 font-mono">
+                    <div>Access Key ID: {maskedKeyId}</div>
+                    <div>Secret Key: {maskedSecretKey}</div>
+                    {maskedSessionToken && <div>Session Token: {maskedSessionToken}</div>}
+                  </div>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                    To change credentials, enter new values below. Leave blank to keep existing.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-medium mb-1">
                   AWS Access Key ID
-                  <span className="text-red-500 ml-1">*</span>
+                  {!isEditingExisting && <span className="text-red-500 ml-1">*</span>}
+                  {isEditingExisting && <span className="text-gray-500 ml-1">(optional - to update)</span>}
                 </label>
                 <input
                   type="text"
                   value={keyId}
-                  onChange={(e) => setKeyId(e.target.value)}
+                  onChange={(e) => {
+                    setKeyId(e.target.value);
+                    if (e.target.value) setIsEditingExisting(false); // Switch to new credentials mode
+                  }}
                   disabled={disabled || isLoading}
                   className="input-field w-full text-sm font-mono"
-                  placeholder="AKIAIOSFODNN7EXAMPLE"
+                  placeholder={isEditingExisting ? "Enter new key to update" : "AKIAIOSFODNN7EXAMPLE"}
                   autoComplete="off"
                 />
               </div>
@@ -198,18 +250,22 @@ export default function S3ConfigForm({ config, onChange, disabled }: S3ConfigFor
               <div>
                 <label className="block text-xs font-medium mb-1">
                   AWS Secret Access Key
-                  <span className="text-red-500 ml-1">*</span>
+                  {!isEditingExisting && <span className="text-red-500 ml-1">*</span>}
+                  {isEditingExisting && <span className="text-gray-500 ml-1">(optional - to update)</span>}
                 </label>
                 <input
                   type="password"
                   value={secretKey}
-                  onChange={(e) => setSecretKey(e.target.value)}
+                  onChange={(e) => {
+                    setSecretKey(e.target.value);
+                    if (e.target.value) setIsEditingExisting(false); // Switch to new credentials mode
+                  }}
                   disabled={disabled || isLoading}
                   className="input-field w-full text-sm font-mono"
-                  placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                  placeholder={isEditingExisting ? "Enter new secret to update" : "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"}
                   autoComplete="off"
                 />
-                {encryptionAvailable === true && (
+                {encryptionAvailable === true && !isEditingExisting && (
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center space-x-1">
                     <span>🔒</span>
                     <span>Credentials are encrypted using OS-level keychain before storage</span>

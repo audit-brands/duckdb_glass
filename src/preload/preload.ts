@@ -52,12 +52,12 @@ contextBridge.exposeInMainWorld('orbitalDb', {
       _params?: QueryParam[],
       options?: QueryOptions
     ): Promise<QueryResult> => ipcRenderer.invoke(IPC_CHANNELS.QUERY_RUN, profileId, sql, options),
-    exportCsv: (profileId: string, sql: string, filePath: string): Promise<number> =>
-      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_CSV, profileId, sql, filePath),
-    exportJson: (profileId: string, sql: string, filePath: string, format: 'array' | 'newline'): Promise<number> =>
-      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_JSON, profileId, sql, filePath, format),
-    exportParquet: (profileId: string, sql: string, filePath: string): Promise<number> =>
-      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_PARQUET, profileId, sql, filePath),
+    exportCsv: (profileId: string, sql: string): Promise<{ cancelled: boolean; rowCount: number; filePath?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_CSV, profileId, sql),
+    exportJson: (profileId: string, sql: string, format: 'array' | 'newline'): Promise<{ cancelled: boolean; rowCount: number; filePath?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_JSON, profileId, sql, format),
+    exportParquet: (profileId: string, sql: string): Promise<{ cancelled: boolean; rowCount: number; filePath?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_PARQUET, profileId, sql),
     cancel: (profileId: string): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.QUERY_CANCEL, profileId),
     autocomplete: (profileId: string, queryString: string): Promise<string[]> =>
@@ -123,7 +123,7 @@ contextBridge.exposeInMainWorld('orbitalDb', {
       ipcRenderer.invoke(IPC_CHANNELS.CREDENTIALS_CHECK_ENCRYPTION_AVAILABLE),
     encrypt: (plaintext: string): Promise<string> =>
       ipcRenderer.invoke(IPC_CHANNELS.CREDENTIALS_ENCRYPT, plaintext),
-    decrypt: (encrypted: string): Promise<string> =>
-      ipcRenderer.invoke(IPC_CHANNELS.CREDENTIALS_DECRYPT, encrypted),
+    getMasked: (encrypted: string): Promise<string> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CREDENTIALS_GET_MASKED, encrypted),
   },
 });

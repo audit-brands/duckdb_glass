@@ -44,9 +44,9 @@ declare global {
           params?: QueryParam[],
           options?: QueryOptions
         ): Promise<QueryResult>;
-        exportCsv(profileId: string, sql: string, filePath: string): Promise<number>;
-        exportJson(profileId: string, sql: string, filePath: string, format: 'array' | 'newline'): Promise<number>;
-        exportParquet(profileId: string, sql: string, filePath: string): Promise<number>;
+        exportCsv(profileId: string, sql: string): Promise<{ cancelled: boolean; rowCount: number; filePath?: string }>;
+        exportJson(profileId: string, sql: string, format: 'array' | 'newline'): Promise<{ cancelled: boolean; rowCount: number; filePath?: string }>;
+        exportParquet(profileId: string, sql: string): Promise<{ cancelled: boolean; rowCount: number; filePath?: string }>;
         cancel(profileId: string): Promise<void>;
         autocomplete(profileId: string, queryString: string): Promise<string[]>;
       };
@@ -89,7 +89,7 @@ declare global {
       credentials: {
         checkEncryptionAvailable(): Promise<boolean>;
         encrypt(plaintext: string): Promise<string>;
-        decrypt(encrypted: string): Promise<string>;
+        getMasked(encrypted: string): Promise<string>;
       };
     };
   }

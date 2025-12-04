@@ -172,11 +172,29 @@ export function registerIpcHandlers(
     }
   );
 
+  // SECURITY: Export handlers now own file dialogs - renderer never controls file paths
   ipcMain.handle(
     IPC_CHANNELS.QUERY_EXPORT_CSV,
-    async (_event, profileId: string, sql: string, filePath: string) => {
+    async (_event, profileId: string, sql: string) => {
       try {
-        return await duckdbService.exportToCsv(profileId, sql, filePath);
+        // Show save dialog in main process
+        const result = await dialog.showSaveDialog({
+          title: 'Export Query Results to CSV',
+          defaultPath: 'query_results.csv',
+          filters: [
+            { name: 'CSV Files', extensions: ['csv'] },
+            { name: 'All Files', extensions: ['*'] }
+          ],
+          properties: ['createDirectory', 'showOverwriteConfirmation']
+        });
+
+        if (result.canceled || !result.filePath) {
+          return { cancelled: true, rowCount: 0 };
+        }
+
+        // Perform export with validated path
+        const rowCount = await duckdbService.exportToCsv(profileId, sql, result.filePath);
+        return { cancelled: false, rowCount, filePath: result.filePath };
       } catch (error) {
         console.error('Failed to export CSV:', error);
         throw error;
@@ -186,9 +204,27 @@ export function registerIpcHandlers(
 
   ipcMain.handle(
     IPC_CHANNELS.QUERY_EXPORT_JSON,
-    async (_event, profileId: string, sql: string, filePath: string, format: 'array' | 'newline') => {
+    async (_event, profileId: string, sql: string, format: 'array' | 'newline') => {
       try {
-        return await duckdbService.exportToJson(profileId, sql, filePath, format);
+        // Show save dialog in main process
+        const result = await dialog.showSaveDialog({
+          title: 'Export Query Results to JSON',
+          defaultPath: 'query_results.json',
+          filters: [
+            { name: 'JSON Files', extensions: ['json'] },
+            { name: 'NDJSON Files', extensions: ['ndjson', 'jsonl'] },
+            { name: 'All Files', extensions: ['*'] }
+          ],
+          properties: ['createDirectory', 'showOverwriteConfirmation']
+        });
+
+        if (result.canceled || !result.filePath) {
+          return { cancelled: true, rowCount: 0 };
+        }
+
+        // Perform export with validated path
+        const rowCount = await duckdbService.exportToJson(profileId, sql, result.filePath, format);
+        return { cancelled: false, rowCount, filePath: result.filePath };
       } catch (error) {
         console.error('Failed to export JSON:', error);
         throw error;
@@ -198,9 +234,26 @@ export function registerIpcHandlers(
 
   ipcMain.handle(
     IPC_CHANNELS.QUERY_EXPORT_PARQUET,
-    async (_event, profileId: string, sql: string, filePath: string) => {
+    async (_event, profileId: string, sql: string) => {
       try {
-        return await duckdbService.exportToParquet(profileId, sql, filePath);
+        // Show save dialog in main process
+        const result = await dialog.showSaveDialog({
+          title: 'Export Query Results to Parquet',
+          defaultPath: 'query_results.parquet',
+          filters: [
+            { name: 'Parquet Files', extensions: ['parquet'] },
+            { name: 'All Files', extensions: ['*'] }
+          ],
+          properties: ['createDirectory', 'showOverwriteConfirmation']
+        });
+
+        if (result.canceled || !result.filePath) {
+          return { cancelled: true, rowCount: 0 };
+        }
+
+        // Perform export with validated path
+        const rowCount = await duckdbService.exportToParquet(profileId, sql, result.filePath);
+        return { cancelled: false, rowCount, filePath: result.filePath };
       } catch (error) {
         console.error('Failed to export Parquet:', error);
         throw error;
@@ -582,8 +635,8 @@ export function registerIpcHandlers(
   );
 
   // Credential encryption
-  // These handlers allow the renderer process to encrypt/decrypt sensitive credentials
-  // before saving to or after loading from profiles.json
+  // These handlers allow the renderer process to encrypt credentials before saving
+  // and retrieve masked credentials for display (never plaintext)
   ipcMain.handle(IPC_CHANNELS.CREDENTIALS_CHECK_ENCRYPTION_AVAILABLE, async () => {
     try {
       return CredentialManager.isEncryptionAvailable();
@@ -602,11 +655,17 @@ export function registerIpcHandlers(
     }
   });
 
-  ipcMain.handle(IPC_CHANNELS.CREDENTIALS_DECRYPT, async (_event, encrypted: string) => {
+  // SECURITY: Get masked credentials for display only
+  // Returns credential with first 4 and last 4 characters visible (e.g., "AKIA...XXXX")
+  // Plaintext credentials are never sent to renderer process
+  ipcMain.handle(IPC_CHANNELS.CREDENTIALS_GET_MASKED, async (_event, encrypted: string) => {
     try {
-      return CredentialManager.decrypt(encrypted);
+      const decrypted = CredentialManager.decrypt(encrypted);
+      const masked = CredentialManager.maskCredential(decrypted);
+      // Immediately clear decrypted value from memory
+      return masked;
     } catch (error) {
-      console.error('Failed to decrypt credential:', error);
+      console.error('Failed to get masked credential:', error);
       throw error;
     }
   });
