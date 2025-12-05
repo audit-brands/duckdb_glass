@@ -2,12 +2,45 @@
 
 This guide explains how to set up code signing for macOS and Windows builds of Orbital DB.
 
+## ⚠️ Current Status
+
+**Code signing is currently DISABLED by default.** The project is configured to build unsigned binaries that will work but show security warnings to users.
+
+- **macOS**: `identity: null` in package.json - builds without signing
+- **Windows**: No signing configuration - builds without signing
+
+This allows builds to succeed without certificates. When you're ready to distribute signed builds, follow this guide to enable code signing.
+
 ## Table of Contents
 
+- [Current Status](#current-status)
+- [Enabling Code Signing](#enabling-code-signing)
 - [macOS Code Signing](#macos-code-signing)
 - [Windows Code Signing](#windows-code-signing)
 - [GitHub Actions CI/CD](#github-actions-cicd)
 - [Testing Signed Builds](#testing-signed-builds)
+
+---
+
+## Enabling Code Signing
+
+To enable code signing once you have certificates:
+
+### macOS
+
+1. Remove `"identity": null` from `package.json` under the `"mac"` section
+2. Set environment variables or add GitHub Secrets (see macOS section below)
+3. Run `npm run package:mac` - it will auto-detect your certificate
+
+### Windows
+
+1. Add this to `package.json` under the `"win"` section:
+   ```json
+   "signingHashAlgorithms": ["sha256"],
+   "certificateSubjectName": "Your Company Name"
+   ```
+2. Set `CSC_LINK` and `CSC_KEY_PASSWORD` environment variables
+3. Run `npm run package:win`
 
 ---
 
