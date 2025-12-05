@@ -90,13 +90,21 @@
         "dmg",
         "zip"
       ],
-      "category": "public.app-category.developer-tools"
+      "category": "public.app-category.developer-tools",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
+      "certificateSubjectName": "Audit Brands LLC"
     },
     "linux": {
       "target": [
